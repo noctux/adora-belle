@@ -160,12 +160,11 @@ type RequestApi =
         "requests" :> Get  '[JSON] State             :<|>
   {- Handle an request using Adminaction (so Handle it yourself, discard it, complete a currently running session, returns the modified helprequests -}
   "admin" :> BasicAuth "admin interface" Admin :>
-        "handle"   :> ReqBody '[JSON] AdminAction :> PostCreated '[JSON] [HelpRequest]
-
+        "handle"   :> ReqBody '[JSON] AdminAction :> PostCreated '[JSON] [HelpRequest] :<|>
+  Raw
 
 requestApi :: Proxy RequestApi
 requestApi = Proxy
-
 
 -- * Lift STM into a Handler: https://docs.servant.dev/en/stable/cookbook/using-custom-monad/UsingCustomMonad.html
 
@@ -201,7 +200,8 @@ server =
   requestHelp  :<|>
   requestPublicState :<|>
   requestAdminState :<|>
-  handleAdminRequest
+  handleAdminRequest :<|>
+  serveDirectoryFileServer "./www"
 
 checkUserHasRequestsPending :: String -> State -> Bool
 checkUserHasRequestsPending name State{activeRequests=a, pendingRequests=p} =

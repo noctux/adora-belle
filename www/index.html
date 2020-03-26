@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <!-- Required meta tags -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+    <!-- Bootstrap CSS -->
+    <link rel="stylesheet" href="static/bootstrap.min.css" integrity="sha384-Vkoo8x4CGsO3+Hhxv8T/Q5PaXtkKtu6ug5TOeNV6gBiFeWPGFN9MuhOf23Q9Ifjh">
+
+    <title>Adora Belle - Request Scheduling System</title>
+  </head>
+  <body>
+	<nav class="navbar sticky-top navbar-dark bg-dark d-flex justify-content-start">
+	  <a class="navbar-brand" href="#">Adora Belle</a>
+	  <div class="navbar-text">- Your hands where I can see them</div>
+	</nav>
+
+	<div class="col text-center">
+	  <h1 class="text-center">Hello, world!</h1>
+	  
+
+	  <button id="questionBtn"   type="button" class="btn btn-primary btn-lg">Ask a Question</button>
+	  <button id="submissionBtn" type="button" class="btn btn-secondary btn-lg">Make a submission</button><br/><br/>
+
+	  <div id="errPanel" class="mx-auto w-50"></div>
+	  <h2>Currently Serviced Requests</h2>
+	  <div id="servicedReqs" class="list-group mx-auto w-50" style="display:inline-block">
+	  </div>
+
+	  <br/>
+	  <br/>
+
+	  <h2>Pending Requests</h2>
+	  <div id="pendingReqs" class="list-group mx-auto w-50" style="display:inline-block">
+	  </div>
+	</div>
+
+
+	<!-- Login modal interface, hidden by default -->
+	<div class="modal fade" id="loginModal" tabindex="-1" role="dialog" aria-labelledby="loginModalLabel" aria-hidden="true">
+	  <div class="modal-dialog modal-dialog-centered" role="document">
+		<div class="modal-content">
+		  <div class="modal-header">
+			<h5 class="modal-title" id="loginModalLabel">Login</h5>
+		  </div>
+		  <form id="loginform">
+			<div class="modal-body">
+			  <div class="form-group">
+				<label for="usernameInput">Username</label>
+				<input type="text" class="form-control" id="usernameInput" placeholder="Enter username">
+			  </div>
+			  <div class="form-group">
+				<label for="passwordInput">Password</label>
+				<input type="password" class="form-control" id="passwordInput" placeholder="Password">
+			  </div>
+			</div>
+			<div class="modal-footer">
+			  <button type="submit" class="btn btn-primary">Submit</button>
+			</div>
+		  </form>
+		</div>
+	  </div>
+	</div>
+
+    <!-- Optional JavaScript -->
+    <!-- jQuery first, then Popper.js, then Bootstrap JS -->
+	<script src="static/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo="></script>
+    <script src="static/popper.min.js" integrity="sha384-Q6E9RHvbIyZFJoft+2mJbHaEWldlvI9IOYy5n3zV9zzTtmI3UksdQRVvoxMfooAo"></script>
+    <script src="static/bootstrap.min.js" integrity="sha384-wfSDF2E50Y2D1uUdj0O3uMBJnjuUD4Ih7YwaYd1iqfktj0Uod8GCExl3Og8ifwB6"></script>
+
+
+	<script>
+	  function testBasicCredentials(endpoint, username, password) {
+		  var success = false;
+		  $.ajax
+		  ({
+			  type: "GET",
+			  url: endpoint,
+			  beforeSend: function (xhr) {
+				  xhr.setRequestHeader ("Authorization", "Basic " + btoa(username + ":" + password));
+			  },
+			  dataType: 'json',
+			  async: false,
+			  success: function (){success = true;},
+			  error: function(){ success = false; alert("Authentication failed: wrong username or password"); }
+		  });
+		  return success;
+	  }
+
+	  function showError(msg) {
+		  var elem = $('<div class="alert alert-warning alert-dismissible fade show" role="alert"></div>').text(msg);
+		  elem.append('<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>');
+		  $('#errPanel').append(elem);
+	  }
+
+	  var username;
+	  var password;
+
+	  function requestHelp(type) {
+		  $.ajax({
+			  type: "POST",
+			  contentType: "application/json; charset=utf-8",
+			  url: "public/request", 
+			  dataType: 'json',
+			  data: JSON.stringify(type)
+		  }).done(function (data) {
+			  console.log(data);
+		  }).fail(function (err) {
+			  showError(err.responseText);
+		  });
+	  }
+
+	  function formatRequest(req) {
+		  var elem;
+		  if (req.reqid.tag == "BlindedID" || req.userid.tag == "Anonymous") {
+			  elem = $('<div class="list-group-item list-group-item-light"></div>');
+			  elem.text(req.reqtype);
+		  } else {
+			  var url = "https://meet.jit.si/" + encodeURIComponent(req.reqid.contents);
+			  elem = $('<div class="list-group-item list-group-item-primary text-left d-flex justify-content-between"></div>');
+			  elem.text(req.reqtype);
+			  var a = $("<a />");
+			  a.attr("href", url);
+			  a.text(url);
+			  elem.append(a);
+			  elem.append($('<button type="button" class="btn btn-sm">Cancel</button>'));
+		  }
+		  return elem;
+	  }
+
+	  function updateServicedRequests(servicedRequests) {
+		  var dict = new Object();
+		  servicedRequests.forEach(function (item, index) {
+			  dict[item[0]] = item[1];
+		  });
+		  
+		  var elem = $('<div id="servicedReqs" class="list-group mx-auto w-50" style="display:inline-block"></div>');
+		  Object.keys(dict).sort().forEach(function (key) {
+			  var lbl = $('<label class="d-flex justify-content-start col-form-label-lg"/>');
+			  lbl.text(key);
+			  elem.append(lbl);
+			  elem.append(formatRequest(dict[key]));
+		  });
+		  $('#servicedReqs').replaceWith(elem);
+	  }
+
+	  function updatePendingRequests(pendingRequests) {
+		  var elem = $('<div id="pendingReqs" class="list-group mx-auto w-50" style="display:inline-block"></div>');
+		  pendingRequests.map(x => elem.append(formatRequest(x)));
+		  $('#pendingReqs').replaceWith(elem);
+	  }
+
+	  function updateUi() {
+		  $.get("public/requests", {
+			  dataType: 'json',
+		  }).done(function (data) {
+			  updatePendingRequests(data.pendingRequests);
+			  updateServicedRequests(data.activeRequests);
+		  });
+	  }
+
+
+	  function initApi(user, pw) {
+		  username = user;
+		  password = pw;
+		  $.ajaxSetup({
+			  beforeSend: function (xhr) {
+				  xhr.setRequestHeader ("Authorization", "Basic " + btoa(username + ":" + password));
+			  }
+		  });
+
+		  updateUi();
+
+		  $('#questionBtn').on("click",   function (e) { requestHelp("Question")   });
+		  $('#submissionBtn').on("click", function (e) { requestHelp("Submission") });
+
+		  window.setInterval(updateUi, 2000);
+	  }
+
+	  
+	  $('#loginform').on('submit', function(event) {
+		  event.preventDefault();
+		  var user = $('#usernameInput').val();
+		  var pw   = $('#passwordInput').val();
+		  if (testBasicCredentials("public/requests", user, pw)) {
+			  initApi(user, pw);
+			  $('#loginModal').modal('hide');
+		  } else {
+			  $('#usernameInput').val('');
+			  $('#passwordInput').val('');
+		  }
+	  })
+	  $('#loginModal').modal({ show: false});
+	  $('#loginModal').modal('show');
+	</script>
+
+  </body>
+</html>
