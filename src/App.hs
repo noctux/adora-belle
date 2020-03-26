@@ -224,7 +224,7 @@ requestHelp u rt = do
 
   case req of
     Nothing  ->
-      liftIO $ throwIO $ err400 { errBody = "User already has a request pending" }
+      throwError $ err400 { errBody = "User already has a request pending" }
     Just req ->
       return req
 
@@ -272,12 +272,11 @@ handleAdminRequest (Admin name) (AdminAction id act)   = do
         (Right matched, s{pendingRequests = rest})
   case res of
     Left err ->
-      liftIO $ throwIO $ err400 { errBody = BS.fromString err }
+      throwError $ err400 { errBody = BS.fromString err }
     Right reqs ->
       return reqs
   where
     matchesid req = id == (reqid $ snd req)
     findActive = filter matchesid . Map.assocs
     split      = partition (\e -> reqid e == id)
-handleAdminRequest _ _  = liftIO $ throwIO $ err400 { errBody = "Invalid user" }
-          
+handleAdminRequest _ _  = throwError $ err400 { errBody = "Invalid user" }
