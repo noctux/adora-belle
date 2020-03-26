@@ -17,8 +17,7 @@
 	</nav>
 
 	<div class="col text-center">
-	  <h1 class="text-center">Hello, world!</h1>
-	  
+	  <br />
 
 	  <button id="questionBtn"   type="button" class="btn btn-primary btn-lg">Ask a Question</button>
 	  <button id="submissionBtn" type="button" class="btn btn-secondary btn-lg">Make a submission</button><br/><br/>
@@ -89,13 +88,20 @@
 	  }
 
 	  function showError(msg) {
-		  var elem = $('<div class="alert alert-warning alert-dismissible fade show" role="alert"></div>').text(msg);
+		  var elem = $('<div class="alert alert-danger alert-dismissible fade show" role="alert"></div>').text(msg);
 		  elem.append('<button type="button" class="close" data-dismiss="alert" aria-label="Close"><span aria-hidden="true">&times;</span></button>');
 		  $('#errPanel').append(elem);
 	  }
 
 	  var username;
 	  var password;
+	  var informationendpoint = "public/requests";
+	  var admininterface = false;
+	  if (window.location.pathname.split('/').pop() == "admin.html") {
+		  informationendpoint = "admin/requests";
+		  admininterface = true;
+	  }
+
 
 	  function requestHelp(type) {
 		  $.ajax({
@@ -105,13 +111,49 @@
 			  dataType: 'json',
 			  data: JSON.stringify(type)
 		  }).done(function (data) {
-			  console.log(data);
+			  updateUi();
 		  }).fail(function (err) {
 			  showError(err.responseText);
 		  });
 	  }
 
-	  function formatRequest(req) {
+	  function cancelRequest(id) {
+		  var payload = {
+			  tag: "RequestID",
+			  contents: id
+		  };
+		  $.ajax({
+			  type: "POST",
+			  contentType: "application/json; charset=utf-8",
+			  url: "public/cancel", 
+			  dataType: 'json',
+			  data: JSON.stringify(payload)
+		  }).done(function (data) {
+			  updateUi();
+		  }).fail(function (err) {
+			  showError(err.responseText);
+		  });
+	  }
+	  
+	  function adminaction(id, verb) {
+		  var payload = [{
+			  tag: "RequestID",
+			  contents: id
+		  }, verb]
+		  $.ajax({
+			  type: "POST",
+			  contentType: "application/json; charset=utf-8",
+			  url: "admin/handle", 
+			  dataType: 'json',
+			  data: JSON.stringify(payload)
+		  }).done(function (data) {
+			  updateUi();
+		  }).fail(function (err) {
+			  showError(err.responseText);
+		  });
+	  }
+
+	  function formatRequest(req, context=null) {
 		  var elem;
 		  if (req.reqid.tag == "BlindedID" || req.userid.tag == "Anonymous") {
 			  elem = $('<div class="list-group-item list-group-item-light"></div>');
@@ -124,7 +166,24 @@
 			  a.attr("href", url);
 			  a.text(url);
 			  elem.append(a);
-			  elem.append($('<button type="button" class="btn btn-sm">Cancel</button>'));
+			  var actions;
+			  var template = $('<button type="button" class="btn btn-secondary btn-sm" />');
+			  if (admininterface) {
+				  actions = $('<div class="btn-group" role="group" aria-label="actions" />');
+				  if (context == "active") {
+					  var complete = template.clone().text("Complete").on('click', function () { adminaction(req.reqid.contents, "Complete") });
+					  actions.append(complete);
+				  } else if (context == "pending") {
+					  var handle = template.clone().text("Handle").on('click', function () { adminaction(req.reqid.contents, "Handle") });
+					  var discard = template.clone().text("Discard").on('click', function () { adminaction(req.reqid.contents, "Discard") });
+					  actions.append(handle);
+					  actions.append(discard);
+				  }
+			  } else {
+				  actions = template.text("Cancel");
+				  actions.on('click', function () { cancelRequest(req.reqid.contents) })
+			  }
+			  elem.append(actions);
 		  }
 		  return elem;
 	  }
@@ -140,19 +199,19 @@
 			  var lbl = $('<label class="d-flex justify-content-start col-form-label-lg"/>');
 			  lbl.text(key);
 			  elem.append(lbl);
-			  elem.append(formatRequest(dict[key]));
+			  elem.append(formatRequest(dict[key], "active"));
 		  });
 		  $('#servicedReqs').replaceWith(elem);
 	  }
 
 	  function updatePendingRequests(pendingRequests) {
 		  var elem = $('<div id="pendingReqs" class="list-group mx-auto w-50" style="display:inline-block"></div>');
-		  pendingRequests.map(x => elem.append(formatRequest(x)));
+		  pendingRequests.map(x => elem.append(formatRequest(x, "pending")));
 		  $('#pendingReqs').replaceWith(elem);
 	  }
 
 	  function updateUi() {
-		  $.get("public/requests", {
+		  $.get(informationendpoint, {
 			  dataType: 'json',
 		  }).done(function (data) {
 			  updatePendingRequests(data.pendingRequests);
@@ -172,8 +231,13 @@
 
 		  updateUi();
 
-		  $('#questionBtn').on("click",   function (e) { requestHelp("Question")   });
-		  $('#submissionBtn').on("click", function (e) { requestHelp("Submission") });
+		  if (admininterface) {
+			  $('#questionBtn').detach();
+			  $('#submissionBtn').detach();
+		  } else {
+			$('#questionBtn').on("click",   function (e) { requestHelp("Question")   });
+			$('#submissionBtn').on("click", function (e) { requestHelp("Submission") });
+		  }
 
 		  window.setInterval(updateUi, 2000);
 	  }
@@ -183,7 +247,7 @@
 		  event.preventDefault();
 		  var user = $('#usernameInput').val();
 		  var pw   = $('#passwordInput').val();
-		  if (testBasicCredentials("public/requests", user, pw)) {
+		  if (testBasicCredentials(informationendpoint, user, pw)) {
 			  initApi(user, pw);
 			  $('#loginModal').modal('hide');
 		  } else {

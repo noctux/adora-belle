@@ -28,7 +28,7 @@ import           Control.Monad.STM (atomically)
 import           Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
 import           Control.Monad.IO.Class      (liftIO)
 import           Control.Exception (throwIO)
-import           Data.List (partition)
+import           Data.List (partition, null)
 import           Servant.Foreign
 import qualified Data.Text as T
 import           Servant.Auth hiding (BasicAuth)
@@ -152,6 +152,8 @@ type RequestApi =
   {- Reqeust help of type RequestType, receives the new request -}
   "public" :> BasicAuth "AdoraBelle UI" User :>
         "request"  :> ReqBody '[JSON] RequestType :> PostCreated '[JSON] HelpRequest :<|>
+  "public" :> BasicAuth "AdoraBelle UI" User :>
+        "cancel"  :> ReqBody '[JSON] RequestID :> PostCreated '[JSON] [HelpRequest] :<|>
   {- Request an update of the global state -}
   "public" :> BasicAuth "AdoraBelle UI" User :>
         "requests" :> Get  '[JSON] State :<|>
@@ -198,6 +200,7 @@ mkApp s = serveWithContext requestApi ctx $ hoistServerWithContext requestApi (P
 server :: ServerT RequestApi AppM
 server = 
   requestHelp  :<|>
+  cancelRequest  :<|>
   requestPublicState :<|>
   requestAdminState :<|>
   handleAdminRequest :<|>
@@ -227,6 +230,32 @@ requestHelp u rt = do
       throwError $ err400 { errBody = "User already has a request pending" }
     Just req ->
       return req
+      
+cancelRequest :: User -> RequestID -> AppM [HelpRequest]
+cancelRequest u rid = do
+  ServantState{state=sest} <- ask
+  req  <- liftIO $ atomically $ stateTVar sest $ \s@State{activeRequests=a,pendingRequests=p} ->
+    let removedactive = map snd $ findActive a
+        remainingactive = foldr (\k m -> Map.delete k m) a $ map fst $ findActive a
+        (matched, rest) = split p
+        removed = matched ++ removedactive
+    in
+      if (Data.List.null removed) then
+         (Left $ "No request matched uuid: " ++ (show rid), s)
+      else if any (\req -> (userid req) /= (AuthUser $ user u)) removed then
+         (Left $ "Access violation: You do not own request " ++ (show rid), s)
+      else
+         (Right removed, s{activeRequests=remainingactive, pendingRequests=rest})
+
+  case req of
+    Left err  ->
+      throwError $ err400 { errBody = BS.fromString err }
+    Right reqs ->
+      return reqs
+  where
+    matchesid req = rid == (reqid $ snd req)
+    findActive = filter matchesid . Map.assocs
+    split      = partition (\e -> reqid e == rid)
 
 requestPublicState :: User -> AppM State
 requestPublicState u = do
