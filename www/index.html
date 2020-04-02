@@ -11,12 +11,28 @@
     <title>Adora Belle - Request Scheduling System</title>
   </head>
   <body>
-	<nav class="navbar sticky-top navbar-dark bg-dark d-flex justify-content-start">
-	  <a class="navbar-brand" href="#">Adora Belle</a>
-	  <div class="navbar-text">- Your hands where I can see them</div>
+	<nav class="navbar sticky-top navbar-dark bg-dark d-flex justify-content-between">
+	  <span>
+		<a class="navbar-brand" href="#">Adora Belle</a>
+		<div class="navbar-text">- Your hands where I can see them</div>
+	  </span>
+	  <span id="navbarbuttonarea">
+	  </span>
 	</nav>
 
 	<div class="col text-center">
+	  <br />
+
+	  <h1 id="lectureName"></h1>
+
+	  <div>
+		Available Timeslots:
+		<ul id="timeSlots" class="list-group">
+		</ul>
+	  </div>
+		
+
+
 	  <br />
 
 	  <button id="questionBtn"   type="button" class="btn btn-primary btn-lg">Ask a Question</button>
@@ -93,6 +109,11 @@
 		  $('#errPanel').append(elem);
 	  }
 
+	  function registerReloadButton() {
+		  var elem = $('<button id="configreloadBtn" class="btn btn-sm btn-outline-primary my-2 my-sm-0" type="submit">Reload Config</button>');
+		  $('#navbarbuttonarea').append(elem);
+	  }
+
 	  var username;
 	  var password;
 	  var informationendpoint = "public/requests";
@@ -100,8 +121,22 @@
 	  if (window.location.pathname.split('/').pop() == "admin.html") {
 		  informationendpoint = "admin/requests";
 		  admininterface = true;
+		  registerReloadButton();
 	  }
 
+	  function triggerConfigReload() {
+		  $.ajax({
+			  type: "POST",
+			  contentType: "application/json; charset=utf-8",
+			  url: "admin/reload", 
+			  dataType: 'json',
+			  data: ""
+		  }).done(function (data) {
+			  updateUi();
+		  }).fail(function (err) {
+			  showError(err.responseText);
+		  });
+	  }
 
 	  function requestHelp(type) {
 		  $.ajax({
@@ -210,10 +245,34 @@
 		  $('#pendingReqs').replaceWith(elem);
 	  }
 
+	  function formatTimeSlot(ts) {
+		  var elem = $('<li/>');
+		  var day = ts.day.charAt(0).toUpperCase() + ts.day.slice(1);
+		  elem.text(day + ": " + ts.start + " - " + ts.end);
+		  return elem;
+	  }
+
+	  function updateTimeSlots(timeslots) {
+		  var elem;
+		  if (timeslots.length <= 0) {
+			elem = $('<div id="timeSlots" class="list-group">Timeslots appear to be unrestricted</div>');
+		  } else {
+			elem = $('<ul id="timeSlots" class="list-group"></div>');
+			timeslots.map(x => elem.append(formatTimeSlot(x)));
+		  }
+		  $('#timeSlots').replaceWith(elem);
+	  }
+
+	  function updateLectureName(lectureName) {
+		  $('#lectureName').text(lectureName);
+	  }
+
 	  function updateUi() {
 		  $.get(informationendpoint, {
 			  dataType: 'json',
 		  }).done(function (data) {
+			  updateLectureName(data.lectureName);
+			  updateTimeSlots(data.timeSlots);
 			  updatePendingRequests(data.pendingRequests);
 			  updateServicedRequests(data.activeRequests);
 		  });
@@ -232,11 +291,12 @@
 		  updateUi();
 
 		  if (admininterface) {
-			  $('#questionBtn').detach();
-			  $('#submissionBtn').detach();
+			$('#questionBtn').detach();
+			$('#submissionBtn').detach();
+			$('#configreloadBtn').on("click", function (e) { triggerConfigReload() });
 		  } else {
-			$('#questionBtn').on("click",   function (e) { requestHelp("Question")   });
-			$('#submissionBtn').on("click", function (e) { requestHelp("Submission") });
+			$('#questionBtn').on("click",     function (e) { requestHelp("Question")   });
+			$('#submissionBtn').on("click",   function (e) { requestHelp("Submission") });
 		  }
 
 		  window.setInterval(updateUi, 2000);

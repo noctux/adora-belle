@@ -35,7 +35,6 @@ dependencies:
   - aeson
   - wai
   - warp
-  - servant-js
   - wai-logger
   - uuid
   - time
@@ -47,3 +46,8 @@ dependencies:
   - servant-auth
   - servant-foreign
   - text
+  - htoml
+  - optparse-applicative
+  - filepath
+  - parsec
+  - either
