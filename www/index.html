@@ -27,7 +27,7 @@
 
 	  <div>
 		Available Timeslots:
-		<ul id="timeSlots" class="list-group">
+		<ul id="timeSlots" class="list-group" style="list-style: none">
 		</ul>
 	  </div>
 		
@@ -263,9 +263,9 @@
 	  function updateTimeSlots(timeslots) {
 		  var elem;
 		  if (timeslots.length <= 0) {
-			elem = $('<div id="timeSlots" class="list-group">Timeslots appear to be unrestricted</div>');
+			elem = $('<div id="timeSlots" class="list-group" >Timeslots appear to be unrestricted</div>');
 		  } else {
-			elem = $('<ul id="timeSlots" class="list-group"></div>');
+			elem = $('<ul id="timeSlots" class="list-group" style="list-style: none"></div>');
 			timeslots.map(x => elem.append(formatTimeSlot(x)));
 		  }
 		  $('#timeSlots').replaceWith(elem);
