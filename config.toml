@@ -1,4 +1,5 @@
 name = "Lecture FOOBAR"
+conferenceurl = "https://meet.jit.si/"
 
 [[timeslots]]
 day   = "Thursday"

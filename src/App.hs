@@ -67,6 +67,7 @@ instance ToJSONKey Responder
 
 data State = State { lectureName     :: String
                    , timeSlots       :: [TimeRange]
+                   , conferenceUrl   :: String
                    , activeRequests  :: Map.Map Responder HelpRequest
                    , pendingRequests :: [ HelpRequest ]
                    }
@@ -177,9 +178,10 @@ instance ToJSON TimeRange
 instance FromJSON TimeRange
 
 data LectureConfig = LectureConfig {
-    name      :: String,
-    timeslots :: [TimeRange],
-    authdb    :: [User]
+    name          :: String,
+    conferenceurl :: String,
+    timeslots     :: [TimeRange],
+    authdb        :: [User]
 } deriving (Show, Generic, Eq)
 instance FromJSON LectureConfig
 
@@ -198,7 +200,7 @@ parseLectureConfig filepath = do
 -- * api
 
 type RequestApi =
-  {- Reqeust help of type RequestType, receives the new request -}
+  {- Request help of type RequestType, receives the new request -}
   "public" :> BasicAuth "AdoraBelle UI" User :>
         "request"  :> ReqBody '[JSON] RequestType :> PostCreated '[JSON] HelpRequest :<|>
   "public" :> BasicAuth "AdoraBelle UI" User :>
@@ -250,6 +252,7 @@ run = do
         defaultSettings
 
   appstate <- atomically $ newTVar $ State { lectureName = name $ configdata
+                                           , conferenceUrl = conferenceurl $ configdata
                                            , timeSlots = timeslots $ configdata
                                            , activeRequests = Map.empty
                                            , pendingRequests = []
@@ -397,9 +400,9 @@ handleReload (Admin _) = do
     Left err -> do
       liftIO $ hPutStrLn stderr $ show err
       throwError $ err400 { errBody = "An error occoured while reloading configuration. Details were printed to servers STDERR (might contain sensitive data)" }
-    Right LectureConfig{name=n,timeslots=ts,authdb=adb} -> do
+    Right LectureConfig{name=n,timeslots=ts,authdb=adb,conferenceurl=confurl} -> do
       liftIO $ writeIORef udbref $ createUserDB $ adb
       newstate <- liftIO $ atomically $ stateTVar sest $ \s ->
-        let nstate = s{lectureName = n, timeSlots=ts} in (nstate, nstate)
+        let nstate = s{lectureName = n, timeSlots=ts, conferenceUrl=confurl} in (nstate, nstate)
       return newstate
 handleReload _  = throwError $ err400 { errBody = "Invalid user" }

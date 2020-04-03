@@ -117,6 +117,7 @@
 	  var username;
 	  var password;
 	  var informationendpoint = "public/requests";
+	  var conferencebaseurl;
 	  var admininterface = false;
 	  if (window.location.pathname.split('/').pop() == "admin.html") {
 		  informationendpoint = "admin/requests";
@@ -188,16 +189,23 @@
 		  });
 	  }
 
+	  function formatUrl(urlsuffix) {
+		  // Some jitsiinstances do not like none alphanumeric characters
+		  urlsuffix = urlsuffix.replace(/[^0-9a-z]/gi, '');
+		  return conferencebaseurl + "/" + encodeURIComponent(urlsuffix);
+	  }
+
+
 	  function formatRequest(req, context=null) {
 		  var elem;
 		  if (req.reqid.tag == "BlindedID" || req.userid.tag == "Anonymous") {
 			  elem = $('<div class="list-group-item list-group-item-light"></div>');
 			  elem.text(req.reqtype);
 		  } else {
-			  var url = "https://meet.jit.si/" + encodeURIComponent(req.reqid.contents);
+			  var url = formatUrl(req.reqid.contents);
 			  elem = $('<div class="list-group-item list-group-item-primary text-left d-flex justify-content-between"></div>');
 			  elem.text(req.reqtype);
-			  var a = $("<a />");
+			  var a = $('<a target="_blank" rel="noopener noreferrer" />');
 			  a.attr("href", url);
 			  a.text(url);
 			  elem.append(a);
@@ -271,6 +279,7 @@
 		  $.get(informationendpoint, {
 			  dataType: 'json',
 		  }).done(function (data) {
+			  conferencebaseurl = data.conferenceUrl;
 			  updateLectureName(data.lectureName);
 			  updateTimeSlots(data.timeSlots);
 			  updatePendingRequests(data.pendingRequests);
