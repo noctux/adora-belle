@@ -15,24 +15,57 @@ students question via webconf.
 ** Usage
 
 #+BEGIN_SRC bash
-stack run adora-belle
+stack run adora-belle -p 8080 -c config.toml
 #+END_SRC
 
 This will start an instance listening at port 8080.
 
 Visit =http://localhost:8080/index.html= for the student interface, and
-=http://localhost:8080/admin.html= for the admin interface. Currently,
-accounts are hardcoded for the demo (until I know what authentication this
-may be plugged in), passwords are: =user{1..8}= with password =pw= and
-=admin{1..3}= with password =admin=.
+=http://localhost:8080/admin.html= for the admin interface.
+Passwords are configured using the file =config.toml=.
+The configuration can be updated any time, using the reload button in the
+admin interface.
 
+** Configuration file
+
+
+#+BEGIN_SRC toml
+# Name of your lecture, displayed in the GUI
+name = "Lecture TITLE"
+# Base url for generated webconference sessions. Generated url will be:
+# conferenceurl + UUID-hexstring
+conferenceurl = "https://meet.jit.si/"
+
+# List of timeslots the tool should accept new requests on, in the servers
+# local timezone. If no timeslots are configured (timeslots=[]), submission
+# will be completely unrestricted
+[[timeslots]]
+day   = "Thursday"
+start = "10:15"
+end   = "18:45"
+
+# Authentication accounts, yeah, I know, passwords are stored in plain. We
+# use it with pwgened passwords, so it's not that grave
+[[authdb]]
+user  = 'user1'
+pass  = 'pw'
+admin = false
+
+# Admin users have the admin flag set
+[[authdb]]
+user  = 'admin1'
+pass  = 'pw'
+admin = true
+#+END_SRC
 
 ** State
 
-Hastily thrown together during the corona crisis as a demo. For production
-use, the authentication should be replaced (no more hardcoded credentials :p).
+Hastily thrown together during the corona crisis as a demo. Use at your own
+risk.
 
 ** Screenshots
+
+(Currently not quite up to date)
 
 *** Student UI:
 
