@@ -332,7 +332,8 @@
 		  $.ajaxSetup({
 			  beforeSend: function (xhr) {
 				  xhr.setRequestHeader ("Authorization", "Basic " + btoa(username + ":" + password));
-			  }
+			  },
+			  cache: false,
 		  });
 
 		  $(window).on('resize', function() {
