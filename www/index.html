@@ -38,16 +38,16 @@
 	  <button id="questionBtn"   type="button" class="btn btn-primary btn-lg">Ask a Question</button>
 	  <button id="submissionBtn" type="button" class="btn btn-secondary btn-lg">Make a submission</button><br/><br/>
 
-	  <div id="errPanel" class="mx-auto w-50"></div>
+	  <div id="errPanel" class="mx-auto w-75"></div>
 	  <h2>Currently Serviced Requests</h2>
-	  <div id="servicedReqs" class="list-group mx-auto w-50" style="display:inline-block">
+	  <div id="servicedReqs" class="list-group mx-auto w-75" style="display:inline-block">
 	  </div>
 
 	  <br/>
 	  <br/>
 
 	  <h2>Pending Requests</h2>
-	  <div id="pendingReqs" class="list-group mx-auto w-50" style="display:inline-block">
+	  <div id="pendingReqs" class="list-group mx-auto w-75" style="display:inline-block">
 	  </div>
 	</div>
 
@@ -195,6 +195,16 @@
 		  return conferencebaseurl + "/" + encodeURIComponent(urlsuffix);
 	  }
 
+	  function formatTime(time) {
+		  var ts   = new Date(time);
+		  var now  = new Date();
+		  var diff = (now.getTime() - ts.getTime()) / 1000; // Seconds
+		  if (diff > 60) {
+			  return (diff / 60).toFixed(0) + "min";
+		  } else {
+			  return diff.toFixed(0) + "s";
+		  }
+	  }
 
 	  function formatRequest(req, context=null) {
 		  var elem;
@@ -203,8 +213,20 @@
 			  elem.text(req.reqtype);
 		  } else {
 			  var url = formatUrl(req.reqid.contents);
-			  elem = $('<div class="list-group-item list-group-item-primary text-left d-flex justify-content-between"></div>');
-			  elem.text(req.reqtype);
+			  elem = $('<div class="list-group-item list-group-item-primary align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
+			  var typedate = $('<div style="text-align: center"></div>');
+			  typedate.text(req.reqtype);
+			  if (admininterface) {
+				  typedate.append('<br/>');
+				  typedate.append(formatTime(req.time) + " ago");
+				  elem.append(typedate);
+			  }
+			  elem.append(typedate);
+			  if (admininterface) {
+				  var userid = $('<div></div>');
+				  userid.text(req.userid.contents);
+				  elem.append(userid);
+			  }
 			  var a = $('<a target="_blank" rel="noopener noreferrer" />');
 			  a.attr("href", url);
 			  a.text(url);
@@ -236,8 +258,8 @@
 		  servicedRequests.forEach(function (item, index) {
 			  dict[item[0]] = item[1];
 		  });
-		  
-		  var elem = $('<div id="servicedReqs" class="list-group mx-auto w-50" style="display:inline-block"></div>');
+
+		  var elem = $('#servicedReqs').clone().empty();
 		  Object.keys(dict).sort().forEach(function (key) {
 			  var lbl = $('<label class="d-flex justify-content-start col-form-label-lg"/>');
 			  lbl.text(key);
@@ -248,7 +270,7 @@
 	  }
 
 	  function updatePendingRequests(pendingRequests) {
-		  var elem = $('<div id="pendingReqs" class="list-group mx-auto w-50" style="display:inline-block"></div>');
+		  var elem = $('#pendingReqs').clone().empty();
 		  pendingRequests.map(x => elem.append(formatRequest(x, "pending")));
 		  $('#pendingReqs').replaceWith(elem);
 	  }
@@ -287,6 +309,22 @@
 		  });
 	  }
 
+	  function relayoutWidth(window) {
+		  var wclass;
+		  if (window.width() < 1200) {
+			  wclass = "w-100";
+		  } else if (window.width() < 1800) {
+			  wclass = "w-75";
+		  } else {
+			  wclass = "w-50";
+		  }
+
+		  ['#errPanel', '#servicedReqs', '#pendingReqs'].forEach(function (elem) {
+			  var domitem = $(elem);
+			  ['w-100', 'w-75', 'w-50'].forEach(c => domitem.removeClass(c));
+			  domitem.addClass(wclass);
+		  });
+	  }
 
 	  function initApi(user, pw) {
 		  username = user;
@@ -296,6 +334,11 @@
 				  xhr.setRequestHeader ("Authorization", "Basic " + btoa(username + ":" + password));
 			  }
 		  });
+
+		  $(window).on('resize', function() {
+			  relayoutWidth($(this));
+		  });
+		  relayoutWidth($(window));
 
 		  updateUi();
 
