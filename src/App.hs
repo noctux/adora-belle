@@ -14,6 +14,7 @@ import           Network.Wai
 import           Network.Wai.Handler.Warp
 import           Servant
 import           System.IO
+import           Crypto.BCrypt
 import qualified Data.Map as Map
 import           Data.Time
 import           Data.UUID
@@ -107,6 +108,7 @@ fromUser :: User -> Admin
 fromUser User{user=u, admin=True} = Admin u
 fromUser User{} = InvalidAdmin
 
+
 checkBasicAuthCommon :: MonadIO m => IORef UserDB -> BasicAuthData -> m (BasicAuthResult User)
 checkBasicAuthCommon dbref basicAuthData = do
   db <- liftIO $ readIORef dbref
@@ -114,10 +116,13 @@ checkBasicAuthCommon dbref basicAuthData = do
   let password = BS.toString $ BL.fromStrict (basicAuthPassword basicAuthData)
   case Map.lookup username db of
     Nothing -> return NoSuchUser
-    Just u  -> if pass u == password
+    Just u  -> if validatePw password (pass u)
                then return (Authorized u)
                else return BadPassword
-  
+  where
+    validatePw pw ref@('$':'2':'y':'$':_) = validatePassword (BL.toStrict $ BS.fromString ref)  (BL.toStrict $ BS.fromString pw)
+    validatePw pw ref = ref == pw
+
 -- provided we are given a user database, we can supply
 -- a function that checks the basic auth credentials
 -- against our database.

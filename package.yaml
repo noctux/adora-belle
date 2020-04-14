@@ -51,3 +51,4 @@ dependencies:
   - filepath
   - parsec
   - either
+  - bcrypt

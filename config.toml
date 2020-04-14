@@ -2,8 +2,8 @@ name = "Lecture FOOBAR"
 conferenceurl = "https://meet.jit.si/"
 
 [[timeslots]]
-day   = "Thursday"
-start = "10:15"
+day   = "Monday"
+start = "08:15"
 end   = "18:45"
 
 [[authdb]]
@@ -70,3 +70,8 @@ admin = true
 user  = 'admin5'
 pass  = 'admin'
 admin = true
+
+[[authdb]]
+user  = 'bcrypt'
+pass  = '$2y$14$xBBZdWgTa8fSU1aPFP5IxeVdUKfT7hUDjmusZEAiNBiYaYEGY/Sh6'
+admin = false

@@ -44,11 +44,17 @@ day   = "Thursday"
 start = "10:15"
 end   = "18:45"
 
-# Authentication accounts, yeah, I know, passwords are stored in plain. We
-# use it with pwgened passwords, so it's not that grave
+# Authentication accounts
+# Either plaintext passwords or bcrypt password hashes. Do not use plaintext
+# passwords that begin with an $, this is used to detect hashed ones
 [[authdb]]
 user  = 'user1'
 pass  = 'pw'
+admin = false
+
+[[authdb]]
+user  = 'bcryptuser'
+pass  = '$2y$14$xBBZdWgTa8fSU1aPFP5IxeVdUKfT7hUDjmusZEAiNBiYaYEGY/Sh6'
 admin = false
 
 # Admin users have the admin flag set
