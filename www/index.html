@@ -361,6 +361,9 @@
 		  var user = $('#usernameInput').val();
 		  var pw   = $('#passwordInput').val();
 		  if (testBasicCredentials(informationendpoint, user, pw)) {
+			  if (user === "admin") {
+				  window.location.href = "admin.html";
+			  }
 			  initApi(user, pw);
 			  $('#loginModal').modal('hide');
 		  } else {
