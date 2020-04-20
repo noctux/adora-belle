@@ -336,6 +336,23 @@
 			  cache: false,
 		  });
 
+		  if (!admininterface) {
+			  // check whether the user is an admin. if so, redirect anyways
+
+			  $.ajax
+			  ({
+				  type: "GET",
+				  url: "/admin/requests",
+				  dataType: 'json',
+				  async: false,
+				  success: function () {
+					  alert("Admins should use the admin endpoint (/admin.html), redirecting...");
+					  window.location.href = "admin.html";
+				  },
+				  error: function(){}
+			  });
+		  }
+
 		  $(window).on('resize', function() {
 			  relayoutWidth($(this));
 		  });
