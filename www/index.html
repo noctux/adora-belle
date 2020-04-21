@@ -358,10 +358,7 @@
 			  cache: false,
 		  });
 
-		  if ((!admininterface) && false) {
-			  // check whether the user is an admin. if so, redirect anyways
-			  // Temporarily disabled: triggers password dialogues on non localhost domains when run in firefox/chromium....
-
+		  if (!admininterface) {
 			  $.ajax
 			  ({
 				  type: "GET",
