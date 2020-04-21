@@ -277,10 +277,28 @@
 		  $('#pendingReqs').replaceWith(elem);
 	  }
 
+	  function isActive(day, start, end) {
+		  var now = new Date;
+		  if (day !== ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][now.getDay()])
+		    return false;
+		  var h = now.getHours();
+		  var m = now.getMinutes();
+		  if (h < start[0] || (h == start[0] && m < start[1]))
+		    return false;
+		  if (h > end[0] || (h == end[0] && m > end[1]))
+		    return false;
+		  return true;
+	  }
+
 	  function formatTimeSlot(ts) {
 		  var elem = $('<li/>');
 		  var day = ts.day.charAt(0).toUpperCase() + ts.day.slice(1);
-		  elem.text(day + ": " + ts.start + " - " + ts.end);
+		  var start = ts.start.split(':').slice(0,2)
+		  var end   = ts.end.split(':').slice(0,2)
+		  elem.text(day + ": " + start.join(':') + " - " + end.join(':'));
+		  if (isActive(ts.day, start, end)) {
+		    elem[0].style.fontWeight = 900;
+		  }
 		  return elem;
 	  }
 
@@ -377,7 +395,6 @@
 		  window.setInterval(updateUi, 2000);
 	  }
 
-	  
 	  $('#loginform').on('submit', function(event) {
 		  event.preventDefault();
 		  var user = $('#usernameInput').val();
