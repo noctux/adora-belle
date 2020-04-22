@@ -26,6 +26,9 @@ executables:
     main: exe/Main.hs
     dependencies:
       - adora-belle
+    ghc-options:
+      - -threaded
+      - -rtsopts
 
 dependencies:
   - base
