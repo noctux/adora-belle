@@ -238,7 +238,9 @@
 			  if (admininterface) {
 				  actions = $('<div class="btn-group" role="group" aria-label="actions" />');
 				  if (context == "active") {
+					  var defer    = template.clone().text("Defer").on('click', function () { adminaction(req.reqid.contents, "Defer") });
 					  var complete = template.clone().text("Complete").on('click', function () { adminaction(req.reqid.contents, "Complete") });
+					  actions.append(defer);
 					  actions.append(complete);
 				  } else if (context == "pending") {
 					  var handle = template.clone().text("Handle").on('click', function () { adminaction(req.reqid.contents, "Handle") });

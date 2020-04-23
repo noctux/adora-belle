@@ -75,7 +75,7 @@ data State = State { lectureName     :: String
   deriving (Generic, Show, Eq)
 instance ToJSON State
              
-data Verb = Handle | Complete | Discard
+data Verb = Handle | Complete | Discard | Defer
   deriving (Generic, Show, Eq)
 instance ToJSON App.Verb
 instance FromJSON App.Verb
@@ -368,7 +368,9 @@ handleAdminRequest (Admin name) (AdminAction id act)   = do
   res  <- liftIO $ atomically $ stateTVar sest $ \s@State{activeRequests=a,pendingRequests=p} ->
     case act of
       Complete ->
-        (Right $ map snd $ findActive a, s{ activeRequests=(foldr (\k m -> Map.delete k m) a $ map fst $ findActive a)})
+        let active = findActive a
+        in
+          (Right $ map snd $ active, s{ activeRequests=(foldr (\k m -> Map.delete k m) a $ map fst $ active)})
       Handle   ->
         if Map.member (Responder name) a then
           (Left $ "Admin " ++ name ++ " is already handling an incident", s)
@@ -385,15 +387,20 @@ handleAdminRequest (Admin name) (AdminAction id act)   = do
       Discard  ->
         let (matched, rest) = split p in
         (Right matched, s{pendingRequests = rest})
+      Defer    ->
+        let active = findActive a
+            reqs   = map snd $ active
+        in
+          (Right $ reqs, s{ activeRequests=(foldr (\k m -> Map.delete k m) a $ map fst $ active), pendingRequests=reqs ++ p})
   case res of
     Left err ->
       throwError $ err400 { errBody = BS.fromString err }
     Right reqs ->
       return reqs
   where
-    matchesid req = id == (reqid $ snd req)
-    findActive = filter matchesid . Map.assocs
-    split      = partition (\e -> reqid e == id)
+    matchesid req     = id == (reqid $ snd req)
+    findActive        = filter matchesid . Map.assocs
+    split             = partition (\e -> reqid e == id)
 handleAdminRequest _ _  = throwError $ err400 { errBody = "Invalid user" }
 
 
