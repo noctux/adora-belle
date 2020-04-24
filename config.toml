@@ -1,5 +1,6 @@
 name = "Lecture FOOBAR"
 conferenceurl = "https://meet.jit.si/"
+backlogminutes = 20
 
 [[timeslots]]
 day   = "Monday"

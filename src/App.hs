@@ -31,7 +31,6 @@ import           Data.List (partition, null)
 import           Data.IORef
 import           Text.Toml
 import           Options.Applicative
-import           System.FilePath.Posix
 import           Data.Text (pack)
 import           Text.ParserCombinators.Parsec.Error
 import           Data.Either.Combinators
@@ -71,16 +70,34 @@ data State = State { lectureName     :: String
                    , conferenceUrl   :: String
                    , activeRequests  :: Map.Map Responder HelpRequest
                    , pendingRequests :: [ HelpRequest ]
+                   , actionLog       :: [ LogItem ]
+                   , backlogMinutes  :: Integer
                    }
   deriving (Generic, Show, Eq)
 instance ToJSON State
-             
-data Verb = Handle | Complete | Discard | Defer
-  deriving (Generic, Show, Eq)
-instance ToJSON App.Verb
-instance FromJSON App.Verb
 
-data AdminAction = AdminAction RequestID App.Verb
+data LogVerb = UserLogAction UserVerb | AdminLogAction AdminVerb
+  deriving (Generic, Show, Eq)
+instance ToJSON LogVerb
+data LogItem = LogItem { action    :: LogVerb
+                       , timeStamp :: UTCTime
+                       , actor     :: String
+                       , requests  :: [HelpRequest]
+                       }
+  deriving (Generic, Show, Eq)
+instance ToJSON LogItem
+             
+data UserVerb = Create | Cancel
+  deriving (Generic, Show, Eq)
+instance ToJSON App.UserVerb
+instance FromJSON App.UserVerb
+
+data AdminVerb = Handle | Complete | Discard | Defer
+  deriving (Generic, Show, Eq)
+instance ToJSON App.AdminVerb
+instance FromJSON App.AdminVerb
+
+data AdminAction = AdminAction RequestID App.AdminVerb
   deriving (Generic, Show, Eq)
 instance ToJSON AdminAction
 instance FromJSON AdminAction
@@ -183,10 +200,11 @@ instance ToJSON TimeRange
 instance FromJSON TimeRange
 
 data LectureConfig = LectureConfig {
-    name          :: String,
-    conferenceurl :: String,
-    timeslots     :: [TimeRange],
-    authdb        :: [User]
+    name           :: String,
+    conferenceurl  :: String,
+    backlogminutes :: Integer,
+    timeslots      :: [TimeRange],
+    authdb         :: [User]
 } deriving (Show, Generic, Eq)
 instance FromJSON LectureConfig
 
@@ -261,6 +279,8 @@ run = do
                                            , timeSlots = timeslots $ configdata
                                            , activeRequests = Map.empty
                                            , pendingRequests = []
+                                           , actionLog = []
+                                           , backlogMinutes = backlogminutes $ configdata
                                            }
   dbref <- newIORef $ createUserDB $ authdb configdata
   runSettings settings $ mkApp dbref $ ServantState appstate (configfile (config :: CLIConfig)) dbref
@@ -279,6 +299,11 @@ server =
   handleAdminRequest :<|>
   handleReload :<|>
   serveDirectoryFileServer "./www"
+
+expireLog :: Integer -> UTCTime -> [LogItem] -> [LogItem]
+expireLog maxbacklog now log = filter (\LogItem{timeStamp=rtime} -> (diffUTCTime now rtime) < maxdiff) log
+  where
+    maxdiff = secondsToNominalDiffTime $ fromInteger $ 60 * maxbacklog
 
 checkUserHasRequestsPending :: String -> State -> Bool
 checkUserHasRequestsPending name State{activeRequests=a, pendingRequests=p} =
@@ -302,14 +327,15 @@ requestHelp u rt = do
   uuid <- liftIO $ nextRandom
   ts   <- liftIO $ getCurrentTime
   tz   <- liftIO $ getCurrentTimeZone
-  req  <- liftIO $ atomically $ stateTVar sest $ \s@State{activeRequests=a,pendingRequests=p,timeSlots=slots} ->
+  req  <- liftIO $ atomically $ stateTVar sest $ \s@State{activeRequests=a,pendingRequests=p,timeSlots=slots,actionLog=log,backlogMinutes=blm} ->
     if not $ checkTimeslotsInTimeZone ts tz  slots then
       (Left "Requests are only allowed during the designated timeslots", s)
     else if checkUserHasRequestsPending (user u) s then
         (Left "User already has a request pending", s)
     else do
         let req = HelpRequest (RequestID uuid) (AuthUser $ user u) ts rt
-        (Right req, s{activeRequests=a, pendingRequests=(p ++ [req])})
+        let act = LogItem{action = UserLogAction Create, timeStamp = ts, actor = user u, requests = [req]}
+        (Right req, s{activeRequests=a, pendingRequests=(p ++ [req]), actionLog=expireLog blm ts (act:log)})
 
   case req of
     Left errmsg  ->
@@ -319,8 +345,9 @@ requestHelp u rt = do
       
 cancelRequest :: User -> RequestID -> AppM [HelpRequest]
 cancelRequest u rid = do
+  ts   <- liftIO $ getCurrentTime
   ServantState{state=sest} <- ask
-  req  <- liftIO $ atomically $ stateTVar sest $ \s@State{activeRequests=a,pendingRequests=p} ->
+  req  <- liftIO $ atomically $ stateTVar sest $ \s@State{activeRequests=a,pendingRequests=p,actionLog=log,backlogMinutes=blm} ->
     let removedactive = map snd $ findActive a
         remainingactive = foldr (\k m -> Map.delete k m) a $ map fst $ findActive a
         (matched, rest) = split p
@@ -331,7 +358,9 @@ cancelRequest u rid = do
       else if any (\req -> (userid req) /= (AuthUser $ user u)) removed then
          (Left $ "Access violation: You do not own request " ++ (show rid), s)
       else
-         (Right removed, s{activeRequests=remainingactive, pendingRequests=rest})
+         let act = LogItem{action = UserLogAction Cancel, timeStamp = ts, actor = user u, requests = removed}
+         in
+           (Right removed, s{activeRequests=remainingactive, pendingRequests=rest, actionLog=expireLog blm ts (act:log)})
 
   case req of
     Left err  ->
@@ -349,7 +378,7 @@ requestPublicState u = do
   s@State{activeRequests=a,pendingRequests=p} <- liftIO $ atomically $ readTVar sest
   let active = Map.map blind a
   let pend   = Prelude.map blind p
-  return $ s{activeRequests=active, pendingRequests=pend}
+  return $ s{activeRequests=active, pendingRequests=pend, actionLog = []}
   where
     blind r@(HelpRequest _ (AuthUser au) _ _)
         | au == user u = r
@@ -364,13 +393,18 @@ requestAdminState _ = do
 
 handleAdminRequest :: Admin -> AdminAction -> AppM [HelpRequest]
 handleAdminRequest (Admin name) (AdminAction id act)   = do
+  ts   <- liftIO $ getCurrentTime
   ServantState{state=sest} <- ask
-  res  <- liftIO $ atomically $ stateTVar sest $ \s@State{activeRequests=a,pendingRequests=p} ->
+  res  <- liftIO $ atomically $ stateTVar sest $ \s@State{activeRequests=a,pendingRequests=p,actionLog=log, backlogMinutes=blm} ->
+    let expire      = expireLog blm ts
+        logtemplate = LogItem{action = AdminLogAction act, timeStamp = ts, actor = name, requests = []}
+    in
     case act of
       Complete ->
         let active = findActive a
+            logitem =  logtemplate{requests = map snd $ active}
         in
-          (Right $ map snd $ active, s{ activeRequests=(foldr (\k m -> Map.delete k m) a $ map fst $ active)})
+          (Right $ map snd $ active, s{ activeRequests=(foldr (\k m -> Map.delete k m) a $ map fst $ active), actionLog=expire (logitem:log)})
       Handle   ->
         if Map.member (Responder name) a then
           (Left $ "Admin " ++ name ++ " is already handling an incident", s)
@@ -381,17 +415,22 @@ handleAdminRequest (Admin name) (AdminAction id act)   = do
                 [] ->
                     (Left $ "No pending request matches RequestID " ++ (show id), s)
                 [x] ->
-                    (Right matched, s{activeRequests=Map.insert (Responder name) x a, pendingRequests = rest})
+                    let logitem = logtemplate{requests = [x]}
+                    in
+                      (Right matched, s{activeRequests=Map.insert (Responder name) x a, pendingRequests = rest, actionLog=expire (logitem:log)})
                 _ ->
                     (Left $ "Internal Error: more than one Request with ID " ++ (show id) ++ " found, wtf?", s)
       Discard  ->
-        let (matched, rest) = split p in
-        (Right matched, s{pendingRequests = rest})
+        let (matched, rest) = split p
+            logitem = logtemplate{requests = matched}
+        in
+          (Right matched, s{pendingRequests = rest, actionLog=expire (logitem:log)})
       Defer    ->
         let active = findActive a
             reqs   = map snd $ active
+            logitem = logtemplate{requests = reqs}
         in
-          (Right $ reqs, s{ activeRequests=(foldr (\k m -> Map.delete k m) a $ map fst $ active), pendingRequests=reqs ++ p})
+          (Right $ reqs, s{ activeRequests=(foldr (\k m -> Map.delete k m) a $ map fst $ active), pendingRequests=reqs ++ p, actionLog=expire (logitem:log)})
   case res of
     Left err ->
       throwError $ err400 { errBody = BS.fromString err }
@@ -412,9 +451,9 @@ handleReload (Admin _) = do
     Left err -> do
       liftIO $ hPutStrLn stderr $ show err
       throwError $ err400 { errBody = "An error occoured while reloading configuration. Details were printed to servers STDERR (might contain sensitive data)" }
-    Right LectureConfig{name=n,timeslots=ts,authdb=adb,conferenceurl=confurl} -> do
+    Right LectureConfig{name=n,timeslots=ts,backlogminutes=backlog, authdb=adb,conferenceurl=confurl} -> do
       liftIO $ writeIORef udbref $ createUserDB $ adb
       newstate <- liftIO $ atomically $ stateTVar sest $ \s ->
-        let nstate = s{lectureName = n, timeSlots=ts, conferenceUrl=confurl} in (nstate, nstate)
+        let nstate = s{lectureName = n, timeSlots=ts, conferenceUrl=confurl, backlogMinutes=backlog} in (nstate, nstate)
       return newstate
 handleReload _  = throwError $ err400 { errBody = "Invalid user" }

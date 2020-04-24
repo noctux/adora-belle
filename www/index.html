@@ -49,6 +49,14 @@
 	  <h2>Pending Requests</h2>
 	  <div id="pendingReqs" class="list-group mx-auto w-75" style="display:inline-block">
 	  </div>
+
+	  <div id="backlogheader" style="display: none">
+		<br/>
+		<br/>
+
+		<h2>Administrative Action Log</h2>
+		<ul id="backlogitems" class="list-group-flush"></div>
+	  </div>
 	</div>
 
 
@@ -225,11 +233,19 @@
 			  elem.text(req.reqtype);
 		  } else {
 			  var url = formatUrl(req.reqid.contents);
-			  elem = $('<div class="list-group-item list-group-item-primary align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
+			  if (context == "log") {
+				  elem = $('<div class="list-group-item list-group-item-secondary align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
+			  } else {
+				  elem = $('<div class="list-group-item list-group-item-primary align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
+			  }
 			  var typedate = $('<div style="text-align: center"></div>');
 			  typedate.text(req.reqtype);
 			  if (admininterface) {
-				  typedate.append('<br/>');
+				  if (context == "log") {
+					  typedate.append(" ");
+				  } else {
+					  typedate.append('<br/>');
+				  }
 				  typedate.append(formatTime(req.time) + " ago");
 				  elem.append(typedate);
 			  }
@@ -267,6 +283,15 @@
 		  return elem;
 	  }
 
+	  function formatBacklogItem(item) {
+		  var log = $('<li class="list-group-item" style="text-align: left" />');
+		  log.append(item.actor + ": " + item.action.contents + " (" +  formatTime(item.timeStamp) + " ago)");
+		  var reqs = $('<ul class"list-group" />')
+		  item.requests.map(x => reqs.append(formatRequest(x, "log")));
+		  log.append(reqs);
+		  return log;
+	  }
+
 	  function updateServicedRequests(servicedRequests) {
 		  var dict = new Object();
 		  servicedRequests.forEach(function (item, index) {
@@ -287,6 +312,12 @@
 		  var elem = $('#pendingReqs').clone().empty();
 		  pendingRequests.map(x => elem.append(formatRequest(x, "pending")));
 		  $('#pendingReqs').replaceWith(elem);
+	  }
+
+	  function updateAdministrativeLog(logItems) {
+		  var elem = $('#backlogitems').clone().empty();
+		  logItems.map(x => elem.append(formatBacklogItem(x)));
+		  $('#backlogitems').replaceWith(elem);
 	  }
 
 	  function isActive(day, start, end) {
@@ -338,6 +369,7 @@
 			  updateTimeSlots(data.timeSlots);
 			  updatePendingRequests(data.pendingRequests);
 			  updateServicedRequests(data.activeRequests);
+			  updateAdministrativeLog(data.actionLog);
 		  });
 	  }
 
@@ -400,6 +432,7 @@
 			$('#questionBtn').detach();
 			$('#submissionBtn').detach();
 			$('#configreloadBtn').on("click", function (e) { triggerConfigReload() });
+			$('#backlogheader').css("display", "initial");
 		  } else {
 			$('#questionBtn').on("click",     function (e) { requestHelp("Question")   });
 			$('#submissionBtn').on("click",   function (e) { requestHelp("Submission") });
