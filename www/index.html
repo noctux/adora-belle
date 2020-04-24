@@ -118,6 +118,23 @@
 
 
 	<script>
+	  const pingSound = `data:audio/opus;base64,T2dnUwACAAAAAAAAAAAk/MDjAAAAAB4lfzYBE09wdXNIZWFkAQI4AYC7AAAAAABPZ2dTAAAAAAAA
+AAAAACT8wOMBAAAATdb1rgGbT3B1c1RhZ3MNAAAATGF2ZjU4LjIwLjEwMAUAAAAdAAAAZW5jb2Rl
+cj1MYXZjNTguMzUuMTAwIGxpYm9wdXMSAAAAYXJ0aXN0PVNvdW5kYm95LmRlCQAAAGRhdGU9MjAw
+NCIAAABERVNDUklQVElPTj1odHRwOi8vd3d3LnNvdW5kYm95LmRlEAAAAGdlbnJlPVNvdW5kIENs
+aXBPZ2dTAASCIwAAAAAAACT8wOMCAAAAkdibPwonN1NiJkVUSTEnfAf9hz2DGus8OzBqgB5OTQsl
+TefrDwYjei2ID57zguK6mXEtpcAAfIf8kuaXLCQX/cz50K3jO5sbFkRZbKMpT2jFQoS+E7yPyT/Q
+yPinEGhHXTaOO+u8Husfi1hDYHyIAEJZijiTHz9J8wELTtC+f2xfrNvR6wgjoBICz9LPKIl2/5dJ
+StQroWyTPcmtjCiUqIqCCzz4EvNU8Oxco6NnoPSEb3ahyP6G1RBjMMl+/z2/fIgCnEf8sGIxvX0D
+MjFzl0KSyU3eQme1vFzLUmXswiL3+lMwtzTpBwKLlufIg9Bdu2+lYeYGdX61XSdyTCNafjcbfvNm
+l34A4Y1swIRd9Mey858ae7pF9MJCYNXDO9LF/bB8iAIk4/PSvEVinHCnyRcUqHIdsSWgzQ3G0Zl8
+qDtMu8+iTgFD8HyIAe7Ig92z7Ab+9aQlXKetve9kO/fMoCDKCMlt2R94/BWsyThs0tadwcBaGXp5
+PRjjdPTOCEuxZWsbqVKWxDDK5xNAD3yIAp969om1c57GSUNV3jmCO40LmjlQmZWcI7Bn5CEhYaHi
+22ANQZpAOUTjJ7+43PAER8QQLZ2IJw+JxjK1Xte8cJ2cKZ82hTEdhwf7UPpThEVBKnyIAmq8Futf
+jPutofqtpfsCPo1bo7BBnOG0MSD+p6D4CouRXGtREe0x2kpihoeRgmBgnwUvOsQDZFMw32WEEFFX
+fqEEcKPu8A98iAHDW3ug1MGWfRy2Q1S9FTYTigPhsvrSu8NRaHIwydten2xYeRcU1IRLvWL1WnEg
+fAgCP5hxZQHlr3GQ23aHCIcEJjwfcs+M/m5DUejuX//PDrWaX/CV`;
+
 	  function isLocalhost() {
 		  const LOCAL_DOMAINS = ["localhost", "127.0.0.1", "[::1]"];
 
@@ -354,9 +371,18 @@
 		  $('#servicedReqs').replaceWith(elem);
 	  }
 
+	  var seen = new Set();
+
 	  function updatePendingRequests(pendingRequests) {
 		  var elem = $('#pendingReqs').clone().empty();
-		  pendingRequests.map(x => elem.append(formatRequest(x, "pending")));
+
+		  pendingRequests.forEach(x => {
+			  elem.append(formatRequest(x, "pending"))
+			  if (x.reqid.contents && !seen.has(x.reqid.contents)) {
+				  new Audio(pingSound).play();
+				  seen.add(x.reqid.contents);
+			  }
+		  });
 		  $('#pendingReqs').replaceWith(elem);
 	  }
 
