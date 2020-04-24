@@ -35,6 +35,11 @@ name = "Lecture TITLE"
 # Base url for generated webconference sessions. Generated url will be:
 # conferenceurl + UUID-hexstring
 conferenceurl = "https://meet.jit.si/"
+# The admininterface displays a log of all actions modifying the
+# request-databse. The parameter configures how long to retain these actions,
+# in minutes. For performance reasons, the log is only cleansed on database
+# modification.
+backlogminutes = 20
 
 # List of timeslots the tool should accept new requests on, in the servers
 # local timezone. If no timeslots are configured (timeslots=[]), submission
