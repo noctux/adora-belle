@@ -228,7 +228,11 @@
 
 	  function formatRequest(req, context=null) {
 		  var elem;
-		  if (req.reqid.tag == "BlindedID" || req.userid.tag == "Anonymous") {
+
+		  if (context == "dummy") {
+			  elem = $('<div class="list-group-item list-group-item-light"></div>');
+			  elem.text("Inactive");
+		  } else if (req.reqid.tag == "BlindedID" || req.userid.tag == "Anonymous") {
 			  elem = $('<div class="list-group-item list-group-item-light"></div>');
 			  elem.text(req.reqtype);
 		  } else {
@@ -292,18 +296,36 @@
 		  return log;
 	  }
 
+	  var seenAdmins = [];
+
 	  function updateServicedRequests(servicedRequests) {
 		  var dict = new Object();
 		  servicedRequests.forEach(function (item, index) {
 			  dict[item[0]] = item[1];
 		  });
 
+		  var order;
+		  if (admininterface) {
+			  Object.keys(dict).forEach(function (elem) {
+				  if(!seenAdmins.includes(elem)) {
+					  seenAdmins.push(elem);
+				  }
+			  });
+			  order = seenAdmins;
+		  } else {
+			  order = Object.keys(dict).sort();
+		  }
+
 		  var elem = $('#servicedReqs').clone().empty();
-		  Object.keys(dict).sort().forEach(function (key) {
+		  order.forEach(function (key) {
 			  var lbl = $('<label class="d-flex justify-content-start col-form-label-lg"/>');
 			  lbl.text(key);
 			  elem.append(lbl);
-			  elem.append(formatRequest(dict[key], "active"));
+			  if (key in dict) {
+				  elem.append(formatRequest(dict[key], "active"));
+			  } else {
+				  elem.append(formatRequest(undefined, "dummy"));
+			  }
 		  });
 		  $('#servicedReqs').replaceWith(elem);
 	  }
