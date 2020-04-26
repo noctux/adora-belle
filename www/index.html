@@ -118,12 +118,53 @@
 
 
 	<script>
+	  // Initialised with defaults
+	  var preferences = {
+		  usesound: false,
+	  };
+	  function loadPreferences() {
+		  if (typeof(Storage) !== "undefined") {
+			  var stored = localStorage.getItem("preferences");
+			  if (stored !== "undefined") {
+				  try {
+					  preferences = JSON.parse(stored);
+					  console.log("parsed preferences");
+					  console.log(preferences);
+				  } catch(e) {
+					  console.log("Error parsing preferences from localstorage, skipping. Input was: " + stored);
+				  }
+			  } else {
+				  console.log("No stored preferences found, keeping defaults");
+			  }
+		  } else {
+			  console.log("Browser does not support local storage, no persistent storage available");
+		  }
+	  }
+	  loadPreferences();
+
+	  function storePreferences() {
+		  if (typeof(Storage) !== "undefined") {
+			  localStorage.setItem("preferences", JSON.stringify(preferences));
+			  console.log("Stored preferences to local storage");
+		  } else {
+			  console.log("Browser does not support local storage, no persistent storage available");
+		  }
+	  }
+
+	  function getPreference(id) {
+		  return preferences[id];
+	  }
+
+	  function setPreference(id, newValue) {
+		  preferences[id] = newValue;
+		  storePreferences();
+	  }
+
 	  function isLocalhost() {
 		  const LOCAL_DOMAINS = ["localhost", "127.0.0.1", "[::1]"];
 
 		  return LOCAL_DOMAINS.includes(window.location.hostname);
 	  }
-
 
 	  function testBasicCredentials(endpoint, username, password) {
 		  var success = false;
