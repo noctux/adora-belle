@@ -28,6 +28,7 @@
 		<div class="navbar-text">- Your hands where I can see them</div>
 	  </span>
 	  <span id="navbarbuttonarea">
+		<button id="preferencesBtn" class="btn btn-sm btn-outline-primary my-2 my-sm-0" data-toggle="modal" data-target="#preferenceModal"><span style="font-family: fontawesome-solid"></span> Preferences</button>
 	  </span>
 	</nav>
 
@@ -97,6 +98,20 @@
 	  </div>
 	</div>
 
+
+	<!-- Preference modal interface, hidden by default -->
+	<div class="modal fade" id="preferenceModal" tabindex="-1" role="dialog" aria-labelledby="preferenceModalLabel" aria-hidden="true">
+	  <div class="modal-dialog modal-dialog-centered" role="document">
+		<div class="modal-content">
+		  <div class="modal-header">
+			<h5 class="modal-title" id="preferenceModalLabel">Preferences</h5>
+		  </div>
+		  <form id="preferenceform">
+		  </form>
+		</div>
+	  </div>
+	</div>
+
 	<footer class="footer">
 	  <div class="container">
 		<span class="text-muted">Adora-Belle is <a href="https://www.fsf.org/about/what-is-free-software" target="_blank">Free-Software</a> and <a href="https://github.com/noctux/adora-belle" target="_blank">available</a> under the Terms and Conditions of the <a href="https://www.gnu.org/licenses/agpl-3.0.en.html" target="_blank">AGPL3 License</a>.</span>
@@ -132,6 +147,7 @@
 	  // Initialised with defaults
 	  var preferences = {
 		  usesound: false,
+		  storelogindata: false,
 	  };
 	  function loadPreferences() {
 		  if (typeof(Storage) !== "undefined") {
@@ -170,6 +186,51 @@
 		  preferences[id] = newValue;
 		  storePreferences();
 	  }
+
+	  function setupPreferencesmodal() {
+		  var body = $('<div class="modal-body" />');
+		  var available = ['storelogindata'];
+		  var config = {
+			  storelogindata: {
+				  help: "Store logincredentials on this device",
+				  handler: function(setting, newValue) {
+					  if (newValue) {
+						  setPreference('username', username);
+						  setPreference('password', password);
+					  } else {
+						  setPreference('username', undefined);
+						  setPreference('password', undefined);
+					  }
+					  setPreference(setting, newValue);
+				  },
+			  },
+		  };
+		  available.forEach(function(settingsname){
+			  var cfg = config[settingsname];
+			  var div = $('<div class="form-group form-check" />');
+			  var input = $('<input type="checkbox" class="form-check-input"/>');
+			  input.prop('id', settingsname);
+			  div.append(input);
+			  // Set the current state
+			  if (getPreference(settingsname)) {
+				  input.attr('checked', true);
+			  }
+			  var label = $('<label class="form-check-label"/>');
+			  label.prop('for', settingsname);
+			  label.text(cfg.help);
+			  div.append(label);
+			  input.change(function () {
+				  if (cfg['handler']) {
+					  cfg.handler(settingsname, input.is(':checked'));
+				  } else {
+					  setPreference(settingsname, input.is(':checked'));
+				  }
+			  });
+			  body.append(div);
+		  });
+		  $('#preferenceform').append(body);
+	  }
+	  setupPreferencesmodal();
 
 	  function isLocalhost() {
 		  const LOCAL_DOMAINS = ["localhost", "127.0.0.1", "[::1]"];
@@ -478,6 +539,7 @@
 		  $('#lectureName').text(lectureName);
 	  }
 
+
 	  function updateUi() {
 		  $.get(informationendpoint, {
 			  dataType: 'json',
@@ -573,9 +635,16 @@
 			  $('#usernameInput').val('');
 			  $('#passwordInput').val('');
 		  }
-	  })
-	  $('#loginModal').modal({ show: false});
-	  $('#loginModal').modal('show');
+	  });
+
+	  var storeduser = getPreference('username');
+	  var storedpw   = getPreference('password');
+	  if (storeduser && storedpw && testBasicCredentials(informationendpoint, storeduser, storedpw)) {
+		  initApi(storeduser, storedpw);
+	  } else {
+		  $('#loginModal').modal({ show: false});
+		  $('#loginModal').modal('show');
+	  }
 	</script>
 
   </body>
