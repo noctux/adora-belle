@@ -306,6 +306,7 @@
 				  elem = $('<div class="list-group-item list-group-item-secondary align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
 			  } else {
 				  elem = $('<div class="list-group-item list-group-item-primary align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
+				  elem.prop('id', req.reqid.contents);
 			  }
 			  var typedate = $('<div style="text-align: center"></div>');
 			  typedate.text(req.reqtype);
@@ -407,6 +408,25 @@
 		  $('#backlogitems').replaceWith(elem);
 	  }
 
+	  function markRecentlyDeferred(logItems) {
+		  var now  = new Date();
+		  for (var i = 0; i < logItems.length; i++) {
+			  var ts   = new Date(logItems[i].timeStamp);
+			  var diff = (now.getTime() - ts.getTime()) / 1000; // Seconds
+			  if (diff > 60){
+				  break;
+			  }
+			  if (logItems[i].action.contents !== "Defer") {
+				  continue;
+			  }
+			  logItems[i].requests.forEach(function (req){
+				  $('#' + req.reqid.contents)
+					  .removeClass('list-group-item-primary list-group-item-secondary')
+					  .addClass('list-group-item-warning');
+			  });
+		  }
+	  }
+
 	  function isActive(day, start, end) {
 		  var now = new Date;
 		  if (day !== ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"][now.getDay()])
@@ -456,7 +476,10 @@
 			  updateTimeSlots(data.timeSlots);
 			  updatePendingRequests(data.pendingRequests);
 			  updateServicedRequests(data.activeRequests);
-			  updateAdministrativeLog(data.actionLog);
+			  if (admininterface) {
+				markRecentlyDeferred(data.actionLog);
+				updateAdministrativeLog(data.actionLog);
+			  }
 		  });
 	  }
 
