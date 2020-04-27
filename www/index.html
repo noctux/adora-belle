@@ -148,6 +148,7 @@
 	  var preferences = {
 		  usesound: false,
 		  storelogindata: false,
+		  markrecentlydeferred: false,
 	  };
 	  function loadPreferences() {
 		  if (typeof(Storage) !== "undefined") {
@@ -190,6 +191,9 @@
 	  function setupPreferencesmodal() {
 		  var body = $('<div class="modal-body" />');
 		  var available = ['storelogindata'];
+		  if (admininterface) {
+			  available.push('markrecentlydeferred');
+		  }
 		  var config = {
 			  storelogindata: {
 				  help: "Store logincredentials on this device",
@@ -203,6 +207,9 @@
 					  }
 					  setPreference(setting, newValue);
 				  },
+			  },
+			  markrecentlydeferred: {
+				  help: "Mark recently deferred requests in lists",
 			  },
 		  };
 		  available.forEach(function(settingsname){
@@ -230,7 +237,6 @@
 		  });
 		  $('#preferenceform').append(body);
 	  }
-	  setupPreferencesmodal();
 
 	  function isLocalhost() {
 		  const LOCAL_DOMAINS = ["localhost", "127.0.0.1", "[::1]"];
@@ -550,8 +556,10 @@
 			  updatePendingRequests(data.pendingRequests);
 			  updateServicedRequests(data.activeRequests);
 			  if (admininterface) {
-				markRecentlyDeferred(data.actionLog);
-				updateAdministrativeLog(data.actionLog);
+				  if(getPreference('markrecentlydeferred')) {
+					  markRecentlyDeferred(data.actionLog);
+				  }
+				  updateAdministrativeLog(data.actionLog);
 			  }
 		  });
 	  }
@@ -636,6 +644,8 @@
 			  $('#passwordInput').val('');
 		  }
 	  });
+
+	  setupPreferencesmodal();
 
 	  var storeduser = getPreference('username');
 	  var storedpw   = getPreference('password');
