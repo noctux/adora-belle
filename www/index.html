@@ -153,11 +153,16 @@
 	  function loadPreferences() {
 		  if (typeof(Storage) !== "undefined") {
 			  var stored = localStorage.getItem("preferences");
-			  if (stored !== "undefined") {
+			  if (stored) {
 				  try {
-					  preferences = JSON.parse(stored);
-					  console.log("parsed preferences");
-					  console.log(preferences);
+					  var parsed = JSON.parse(stored);
+					  if (parsed) {
+						  preferences = parsed;
+						  console.log("parsed preferences");
+						  console.log(preferences);
+					  } else {
+						  console.log("Found invalid value in parsed JSON state");
+					  }
 				  } catch(e) {
 					  console.log("Error parsing preferences from localstorage, skipping. Input was: " + stored);
 				  }
