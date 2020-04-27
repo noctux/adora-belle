@@ -198,6 +198,7 @@
 		  var available = ['storelogindata'];
 		  if (admininterface) {
 			  available.push('markrecentlydeferred');
+			  available.push('usesound');
 		  }
 		  var config = {
 			  storelogindata: {
@@ -216,6 +217,9 @@
 			  markrecentlydeferred: {
 				  help: "Mark recently deferred requests in lists",
 			  },
+			  usesound: {
+				  help: "Notify me by sound on new activity",
+			  }
 		  };
 		  available.forEach(function(settingsname){
 			  var cfg = config[settingsname];
@@ -278,17 +282,7 @@
 	  }
 
 	  function registerReloadButton() {
-		  let elem = $('<button id="configreloadBtn" class="btn btn-sm btn-outline-primary my-2 my-sm-0" type="submit">Enable Sound</button>');
-		  $(elem).on('click', function(_) {
-			  let usesound = getPreference('usesound');
-			  setPreference('usesound', !usesound)
-			  elem.html(usesound ? "Enable Sound" : "Disable Sound");
-		  });
-		  $('#navbarbuttonarea').append(elem);
-	  }
-
-	  function registerReloadButton() {
-		  var elem = $('<button id="configresoundBtn" class="btn btn-sm btn-outline-primary my-2 my-sm-0" type="submit"></button>');
+		  var elem = $('<button id="configresoundBtn" class="btn btn-sm btn-outline-primary my-2 my-sm-0" type="submit">Reload Config</button>');
 		  $('#navbarbuttonarea').append(elem);
 	  }
 
@@ -301,7 +295,6 @@
 		  informationendpoint = "admin/requests";
 		  admininterface = true;
 		  registerReloadButton();
-		  registerSoundButton();
 	  }
 
 	  function triggerConfigReload() {
@@ -501,7 +494,7 @@
 			  }
 			  elem.append(formatRequest(x, "pending"));
 		  });
-		  if (getPreference('usesound') && before != 0 && seen.size > before) {
+		  if (admininterface && getPreference('usesound') && before != 0 && seen.size > before) {
 			  new Audio("static/sound.opus").play();
 		  }
 		  $('#pendingReqs').replaceWith(elem);
