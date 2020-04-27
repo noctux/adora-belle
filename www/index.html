@@ -561,6 +561,10 @@
 				  }
 				  updateAdministrativeLog(data.actionLog);
 			  }
+		  }).fail(function (err) {
+			  console.log("An error occurred");
+			  console.log(err);
+			  showError("Updating request state failed");
 		  });
 	  }
 
