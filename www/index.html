@@ -273,7 +273,17 @@
 	  }
 
 	  function registerReloadButton() {
-		  var elem = $('<button id="configreloadBtn" class="btn btn-sm btn-outline-primary my-2 my-sm-0" type="submit">Reload Config</button>');
+		  let elem = $('<button id="configreloadBtn" class="btn btn-sm btn-outline-primary my-2 my-sm-0" type="submit">Enable Sound</button>');
+		  $(elem).on('click', function(_) {
+			  let usesound = getPreference('usesound');
+			  setPreference('usesound', !usesound)
+			  elem.html(usesound ? "Enable Sound" : "Disable Sound");
+		  });
+		  $('#navbarbuttonarea').append(elem);
+	  }
+
+	  function registerReloadButton() {
+		  var elem = $('<button id="configresoundBtn" class="btn btn-sm btn-outline-primary my-2 my-sm-0" type="submit"></button>');
 		  $('#navbarbuttonarea').append(elem);
 	  }
 
@@ -286,6 +296,7 @@
 		  informationendpoint = "admin/requests";
 		  admininterface = true;
 		  registerReloadButton();
+		  registerSoundButton();
 	  }
 
 	  function triggerConfigReload() {
@@ -474,9 +485,20 @@
 		  $('#servicedReqs').replaceWith(elem);
 	  }
 
+	  const seen = new Set();
+
 	  function updatePendingRequests(pendingRequests) {
 		  var elem = $('#pendingReqs').clone().empty();
-		  pendingRequests.map(x => elem.append(formatRequest(x, "pending")));
+		  var before = seen.size;
+		  pendingRequests.forEach(x => {
+			  if (x.reqid.contents && !seen.has(x.reqid.contents)) {
+				  seen.add(x.reqid.contents);
+			  }
+			  elem.append(formatRequest(x, "pending"));
+		  });
+		  if (getPreference('usesound') && before != 0 && seen.size > before) {
+			  new Audio("static/sound.opus").play();
+		  }
 		  $('#pendingReqs').replaceWith(elem);
 	  }
 
