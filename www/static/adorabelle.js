@@ -306,21 +306,16 @@ function formatBacklogItem(item) {
 var seenAdmins = [];
 
 function updateServicedRequests(servicedRequests) {
-	var dict = new Object();
-	servicedRequests.forEach(function (item, index) {
-		dict[item[0]] = item[1];
-	});
-
 	var order;
 	if (admininterface) {
-		Object.keys(dict).forEach(function (elem) {
+		Object.keys(servicedRequests).forEach(function (elem) {
 			if(!seenAdmins.includes(elem)) {
 				seenAdmins.push(elem);
 			}
 		});
 		order = seenAdmins;
 	} else {
-		order = Object.keys(dict).sort();
+		order = Object.keys(servicedRequests).sort();
 	}
 
 	var elem = $('#servicedReqs').clone().empty();
@@ -328,8 +323,8 @@ function updateServicedRequests(servicedRequests) {
 		var lbl = $('<label class="d-flex justify-content-start col-form-label-lg"/>');
 		lbl.text(key);
 		elem.append(lbl);
-		if (key in dict) {
-			elem.append(formatRequest(dict[key], "active"));
+		if (key in servicedRequests) {
+			elem.append(formatRequest(servicedRequests[key], "active"));
 		} else {
 			elem.append(formatRequest(undefined, "dummy"));
 		}
