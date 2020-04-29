@@ -75,13 +75,13 @@ data State = State { lectureName     :: String
                    }
   deriving (Generic, Show, Eq)
 instance ToJSON State where
-  toJSON state = object [ ("lectureName" .= (lectureName state))
-                        , ("timeSlots" .= (timeSlots state))
-                        , ("conferenceUrl" .= (conferenceUrl state))
-                        , ("activeRequests" .= (activeRequests state))
-                        , ("pendingRequests" .= pending)
-                        , ("actionLog" .= (actionLog state))
-                        , ("backlogMinutes" .= (backlogMinutes state))
+  toJSON state = object [ "lectureName" .= lectureName state
+                        , "timeSlots" .= timeSlots state
+                        , "conferenceUrl" .= conferenceUrl state
+                        , "activeRequests" .= activeRequests state
+                        , "pendingRequests" .= pending
+                        , "actionLog" .= actionLog state
+                        , "backlogMinutes" .= backlogMinutes state
                         ]
     where fn k v l = (k .= v) : l
           pending = object $ M.foldrWithKey fn [] (pendingRequests state)
