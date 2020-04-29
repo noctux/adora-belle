@@ -1,5 +1,6 @@
 {-# LANGUAGE DataKinds #-}
 {-# LANGUAGE DeriveGeneric #-}
+{-# LANGUAGE DerivingVia #-}
 {-# LANGUAGE LambdaCase #-}
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DuplicateRecordFields #-}
@@ -60,10 +61,10 @@ data HelpRequest = HelpRequest { reqid :: RequestID, userid :: Identification, t
   deriving (Generic, Show, Eq)
 instance ToJSON HelpRequest
 
-data Responder = Responder String
+newtype Responder = Responder String
   deriving (Generic, Show, Eq, Ord)
+  deriving ToJSONKey via String
 instance ToJSON Responder
-instance ToJSONKey Responder
 
 data State = State { lectureName     :: String
                    , timeSlots       :: [TimeRange]
