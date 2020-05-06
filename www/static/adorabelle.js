@@ -136,7 +136,7 @@ function showError(msg) {
 }
 
 function registerReloadButton() {
-	var elem = $('<button id="configresoundBtn" class="btn btn-sm btn-outline-primary my-2 my-sm-0" type="submit">Reload Config</button>');
+	var elem = $('<button id="configreloadBtn" class="btn btn-sm btn-outline-primary my-2 my-sm-0" type="submit">Reload Config</button>');
 	$('#navbarbuttonarea').append(elem);
 }
 
