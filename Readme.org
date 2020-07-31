@@ -76,8 +76,6 @@ risk.
 
 ** Screenshots
 
-(Currently not quite up to date)
-
 *** Student UI:
 
 [[screenshots/public.png]]
