@@ -13,6 +13,7 @@ import           Data.Aeson.Types
 import           GHC.Generics
 import           Network.Wai
 import           Network.Wai.Handler.Warp
+import           Network.Wai.Middleware.StripHeaders (stripHeader)
 import           Servant
 import           System.IO
 import           Crypto.BCrypt
@@ -87,7 +88,7 @@ data LogItem = LogItem { action    :: LogVerb
                        }
   deriving (Generic, Show, Eq)
 instance ToJSON LogItem
-             
+
 data UserVerb = Create | Cancel
   deriving (Generic, Show, Eq)
 instance ToJSON App.UserVerb
@@ -268,7 +269,7 @@ run = do
     exitWithErrorMessage ("Failed to parse config file: " ++ filepath ++ "\n" ++ (fromLeft' fileconf)) (ExitFailure 2)
 
   let configdata = fromRight' fileconf
-  
+
   let lport = port config
       settings =
         setPort lport $
@@ -284,7 +285,9 @@ run = do
                                            , backlogMinutes = backlogminutes $ configdata
                                            }
   dbref <- newIORef $ createUserDB $ authdb configdata
-  runSettings settings $ mkApp dbref $ ServantState appstate (configfile (config :: CLIConfig)) dbref
+  runSettings settings $ stripAuthenticateHeader $ mkApp dbref $ ServantState appstate (configfile (config :: CLIConfig)) dbref
+  where
+    stripAuthenticateHeader = (modifyResponse $ stripHeader "WWW-Authenticate") :: Middleware
 
 mkApp :: IORef UserDB -> ServantState -> Application
 mkApp dbref s = serveWithContext requestApi ctx $ hoistServerWithContext requestApi (Proxy :: Proxy '[BasicAuthCheck Admin, BasicAuthCheck User]) (nt s) server
@@ -292,7 +295,7 @@ mkApp dbref s = serveWithContext requestApi ctx $ hoistServerWithContext request
 
 -- Handlers
 server :: ServerT RequestApi AppM
-server = 
+server =
   requestHelp  :<|>
   cancelRequest  :<|>
   requestPublicState :<|>
@@ -343,7 +346,7 @@ requestHelp u rt = do
       throwError $ err400 { errBody = errmsg }
     Right request ->
       return request
-      
+
 cancelRequest :: User -> RequestID -> AppM [HelpRequest]
 cancelRequest u rid = do
   ts   <- liftIO $ getCurrentTime
