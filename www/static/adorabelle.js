@@ -108,16 +108,10 @@ function setupPreferencesmodal() {
 	$('#preferenceform').append(body);
 }
 
-function isLocalhost() {
-	const LOCAL_DOMAINS = ["localhost", "127.0.0.1", "[::1]"];
-
-	return LOCAL_DOMAINS.includes(window.location.hostname);
-}
-
 function testBasicCredentials(endpoint, username, password) {
 	var success = false;
 
-	var cfg = {
+	$.ajax({
 		type: "GET",
 		url: endpoint,
 		beforeSend: function (xhr) {
@@ -127,12 +121,7 @@ function testBasicCredentials(endpoint, username, password) {
 		async: false,
 		success: function (){success = true;},
 		error: function(){ success = false; alert("Authentication failed: wrong username or password"); }
-	};
-	if (!isLocalhost()) {
-		cfg["username"] = username;
-		cfg["password"] = password;
-	}
-	$.ajax(cfg);
+	});
 	return success;
 }
 
@@ -162,7 +151,7 @@ function triggerConfigReload() {
 	$.ajax({
 		type: "POST",
 		contentType: "application/json; charset=utf-8",
-		url: "admin/reload", 
+		url: "admin/reload",
 		dataType: 'json',
 		data: ""
 	}).done(function (data) {
@@ -176,7 +165,7 @@ function requestHelp(type) {
 	$.ajax({
 		type: "POST",
 		contentType: "application/json; charset=utf-8",
-		url: "public/request", 
+		url: "public/request",
 		dataType: 'json',
 		data: JSON.stringify(type)
 	}).done(function (data) {
@@ -194,7 +183,7 @@ function cancelRequest(id) {
 	$.ajax({
 		type: "POST",
 		contentType: "application/json; charset=utf-8",
-		url: "public/cancel", 
+		url: "public/cancel",
 		dataType: 'json',
 		data: JSON.stringify(payload)
 	}).done(function (data) {
@@ -212,7 +201,7 @@ function adminaction(id, verb) {
 	$.ajax({
 		type: "POST",
 		contentType: "application/json; charset=utf-8",
-		url: "admin/handle", 
+		url: "admin/handle",
 		dataType: 'json',
 		data: JSON.stringify(payload)
 	}).done(function (data) {
@@ -465,17 +454,12 @@ function initApi(user, pw) {
 	username = user;
 	password = pw;
 
-	var cfg = {
+	$.ajaxSetup({
 		beforeSend: function (xhr) {
 			xhr.setRequestHeader ("Authorization", "Basic " + btoa(username + ":" + password));
 		},
 		cache: false,
-	};
-	if (!isLocalhost()) {
-		cfg["username"] = username;
-		cfg["password"] = password;
-	}
-	$.ajaxSetup(cfg);
+	});
 
 	if (!admininterface) {
 		$.ajax
