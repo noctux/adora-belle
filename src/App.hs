@@ -132,11 +132,12 @@ checkBasicAuthCommon dbref basicAuthData = do
   db <- liftIO $ readIORef dbref
   let username = BS.toString $ BL.fromStrict (basicAuthUsername basicAuthData)
   let password = BS.toString $ BL.fromStrict (basicAuthPassword basicAuthData)
+  -- return 'Unauthorized' to prevent chrome from displaying a basic auth dialog
   case Map.lookup username db of
-    Nothing -> return NoSuchUser
+    Nothing -> return Unauthorized
     Just u  -> if validatePw password (pass u)
                then return (Authorized u)
-               else return BadPassword
+               else return Unauthorized
   where
     validatePw pw ref@('$':'2':'y':'$':_) = validatePassword (BL.toStrict $ BS.fromString ref)  (BL.toStrict $ BS.fromString pw)
     validatePw pw ref = ref == pw
@@ -157,11 +158,9 @@ checkAdminBasicAuth dbref = do
         Authorized u -> do
             let useradmin = fromUser u
             case useradmin of
-                InvalidAdmin -> return NoSuchUser
+                InvalidAdmin -> return Unauthorized
                 _ -> return $ Authorized useradmin
-        NoSuchUser -> return NoSuchUser
-        BadPassword -> return BadPassword
-        Unauthorized -> return Unauthorized
+        _ -> return Unauthorized
 
 -- * Commandline Parsing
 

@@ -101,16 +101,10 @@ function setupPreferencesmodal() {
 	$('#preferenceform').append(body);
 }
 
-function isLocalhost() {
-	const LOCAL_DOMAINS = ["localhost", "127.0.0.1", "[::1]"];
-
-	return LOCAL_DOMAINS.includes(window.location.hostname);
-}
-
 function testBasicCredentials(endpoint, username, password) {
 	var success = false;
 
-	var cfg = {
+	$.ajax({
 		type: "GET",
 		url: endpoint,
 		beforeSend: function (xhr) {
@@ -120,12 +114,7 @@ function testBasicCredentials(endpoint, username, password) {
 		async: false,
 		success: function (){success = true;},
 		error: function(){ success = false; alert("Authentication failed: wrong username or password"); }
-	};
-	if (!isLocalhost()) {
-		cfg["username"] = username;
-		cfg["password"] = password;
-	}
-	$.ajax(cfg);
+	});
 	return success;
 }
 
@@ -458,17 +447,12 @@ function initApi(user, pw) {
 	username = user;
 	password = pw;
 
-	var cfg = {
+	$.ajaxSetup({
 		beforeSend: function (xhr) {
 			xhr.setRequestHeader ("Authorization", "Basic " + btoa(username + ":" + password));
 		},
 		cache: false,
-	};
-	if (!isLocalhost()) {
-		cfg["username"] = username;
-		cfg["password"] = password;
-	}
-	$.ajaxSetup(cfg);
+	});
 
 	if (!admininterface) {
 		$.ajax
