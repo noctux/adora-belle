@@ -5,8 +5,15 @@ var preferences = {
 	markrecentlydeferred: false,
 };
 function loadPreferences() {
+	var stored;
+	var supported = false;
 	if (typeof(Storage) !== "undefined") {
-		var stored = localStorage.getItem("preferences");
+		try {
+			stored = localStorage.getItem("preferences");
+			supported = true;
+		} catch (e) {}
+	}
+	if (supported) {
 		if (stored) {
 			try {
 				var parsed = JSON.parse(stored);
