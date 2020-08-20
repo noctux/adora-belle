@@ -10,12 +10,12 @@ tests:
     source-dirs:
       - test
     dependencies:
-      - hspec
       - adora-belle
-      - servant-client
-      - warp >= 3.2.4
+      - hspec
       - http-client
       - http-types
+      - servant-client
+      - warp >= 3.2.4
 
 library:
   source-dirs:
@@ -27,32 +27,32 @@ executables:
     dependencies:
       - adora-belle
     ghc-options:
-      - -threaded
       - -rtsopts
+      - -threaded
 
 dependencies:
-  - base
-  - servant
-  - servant-server
-  - transformers
   - aeson
-  - wai
-  - warp
-  - wai-logger
-  - uuid
-  - time
-  - random
-  - containers
+  - base
+  - bcrypt
   - bytestring
-  - stm
-  - utf8-string
-  - servant-auth
-  - servant-foreign
-  - text
+  - containers
+  - either
+  - filepath
   - htoml
   - optparse-applicative
-  - filepath
   - parsec
-  - either
-  - bcrypt
+  - random
+  - servant
+  - servant-auth
+  - servant-foreign
+  - servant-server
+  - stm
+  - text
+  - time
+  - transformers
+  - utf8-string
+  - uuid
+  - wai
   - wai-extra
+  - wai-logger
+  - warp
