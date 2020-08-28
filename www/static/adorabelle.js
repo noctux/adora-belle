@@ -511,6 +511,10 @@ $('#loginform').on('submit', function(event) {
 	}
 });
 
+$('#loginModal').on('shown.bs.modal', function () {
+	$('#usernameInput').trigger('focus');
+});
+
 setupPreferencesmodal();
 
 var storeduser = getPreference('username');
