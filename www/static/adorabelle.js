@@ -507,7 +507,6 @@ $('#loginform').on('submit', function(event) {
 		initApi(user, pw);
 		$('#loginModal').modal('hide');
 	} else {
-		$('#usernameInput').val('');
 		$('#passwordInput').val('');
 	}
 });
