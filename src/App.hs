@@ -5,6 +5,7 @@
 {-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DuplicateRecordFields #-}
 {-# LANGUAGE OverloadedStrings #-}
+{-# LANGUAGE TypeApplications #-}
 
 module App where
 
@@ -116,6 +117,11 @@ data User = User
 instance FromJSON User
 -- could be a postgres connection, a file, anything.
 type UserDB = Map.Map Username User
+data AuthConfig = AuthConfig
+  { acceptanyusers :: Bool
+  , authdb :: UserDB
+  } deriving (Show, Generic)
+instance FromJSON AuthConfig
 -- create a "database" from a list of users
 createUserDB :: [User] -> UserDB
 createUserDB users = Map.fromList [ (user u, u) | u <- users ]
@@ -128,16 +134,18 @@ fromUser User{user=u, admin=True} = Admin u
 fromUser User{} = InvalidAdmin
 
 
-checkBasicAuthCommon :: MonadIO m => IORef UserDB -> BasicAuthData -> m (BasicAuthResult User)
-checkBasicAuthCommon dbref basicAuthData = do
-  db <- liftIO $ readIORef dbref
+checkBasicAuthCommon :: MonadIO m => UserDB -> Bool -> BasicAuthData -> m (BasicAuthResult User)
+checkBasicAuthCommon db acceptanypassword basicAuthData = do
   let username = BS.toString $ BL.fromStrict (basicAuthUsername basicAuthData)
   let password = BS.toString $ BL.fromStrict (basicAuthPassword basicAuthData)
   case Map.lookup username db of
-    Nothing -> return NoSuchUser
     Just u  -> if validatePw password (pass u)
                then return (Authorized u)
                else return BadPassword
+    Nothing -> if acceptanypassword then
+                 return $ Authorized $ User{user=username,admin=False,pass=""}
+               else
+                 return $ NoSuchUser
   where
     validatePw pw ref@('$':'2':'y':'$':_) = validatePassword (BL.toStrict $ BS.fromString ref)  (BL.toStrict $ BS.fromString pw)
     validatePw pw ref = ref == pw
@@ -145,15 +153,17 @@ checkBasicAuthCommon dbref basicAuthData = do
 -- provided we are given a user database, we can supply
 -- a function that checks the basic auth credentials
 -- against our database.
-checkBasicAuth :: IORef UserDB -> BasicAuthCheck User
+checkBasicAuth :: IORef AuthConfig -> BasicAuthCheck User
 checkBasicAuth dbref = do
-  BasicAuthCheck $ checkBasicAuthCommon dbref
+  BasicAuthCheck $ \basicAuthData -> do
+    cfg <- liftIO $ readIORef dbref
+    checkBasicAuthCommon (authdb (cfg :: AuthConfig)) (acceptanyusers (cfg :: AuthConfig)) basicAuthData
 
-                    
-checkAdminBasicAuth :: IORef UserDB -> BasicAuthCheck Admin
+checkAdminBasicAuth :: IORef AuthConfig -> BasicAuthCheck Admin
 checkAdminBasicAuth dbref = do
   BasicAuthCheck $ \basicAuthData -> do
-    usercheck <- checkBasicAuthCommon dbref basicAuthData
+    cfg <- liftIO $ readIORef dbref
+    usercheck <- checkBasicAuthCommon (authdb (cfg :: AuthConfig)) False basicAuthData
     case usercheck of
         Authorized u -> do
             let useradmin = fromUser u
@@ -202,11 +212,12 @@ instance ToJSON TimeRange
 instance FromJSON TimeRange
 
 data LectureConfig = LectureConfig {
-    name           :: String,
-    conferenceurl  :: String,
-    backlogminutes :: Integer,
-    timeslots      :: [TimeRange],
-    authdb         :: [User]
+    name                 :: String,
+    conferenceurl        :: String,
+    backlogminutes       :: Integer,
+    timeslots            :: [TimeRange],
+    acceptanyusers :: Bool,
+    authdb               :: [User]
 } deriving (Show, Generic, Eq)
 instance FromJSON LectureConfig
 
@@ -221,7 +232,7 @@ parseLectureConfig filepath = do
         let parsed = parseTomlDoc (show filepath) $ pack txt
         return $ ((mapLeft (unlines . (map messageString) . errorMessages) parsed >>=
                     \x -> (parseEither $ parseJSON) $ toJSON x))
-    
+
 -- * api
 
 type RequestApi =
@@ -248,7 +259,7 @@ requestApi = Proxy
 
 -- * Lift STM into a Handler: https://docs.servant.dev/en/stable/cookbook/using-custom-monad/UsingCustomMonad.html
 
-data ServantState = ServantState {state :: TVar State, configfile :: FilePath, userdb :: IORef UserDB}
+data ServantState = ServantState {state :: TVar State, configfile :: FilePath, userdb :: IORef AuthConfig}
 type AppM = ReaderT ServantState Handler
 
 nt :: ServantState -> AppM a -> Handler a
@@ -268,7 +279,7 @@ run = do
   when (isLeft fileconf) $
     exitWithErrorMessage ("Failed to parse config file: " ++ filepath ++ "\n" ++ (fromLeft' fileconf)) (ExitFailure 2)
 
-  let configdata = fromRight' fileconf
+  let configdata = (fromRight' fileconf) :: LectureConfig
 
   let lport = port config
       settings =
@@ -284,12 +295,12 @@ run = do
                                            , actionLog = []
                                            , backlogMinutes = backlogminutes $ configdata
                                            }
-  dbref <- newIORef $ createUserDB $ authdb configdata
+  dbref <- newIORef $ AuthConfig (acceptanyusers (configdata :: LectureConfig)) (createUserDB $ authdb (configdata :: LectureConfig))
   runSettings settings $ stripAuthenticateHeader $ mkApp dbref $ ServantState appstate (configfile (config :: CLIConfig)) dbref
   where
     stripAuthenticateHeader = (modifyResponse $ stripHeader "WWW-Authenticate") :: Middleware
 
-mkApp :: IORef UserDB -> ServantState -> Application
+mkApp :: IORef AuthConfig -> ServantState -> Application
 mkApp dbref s = serveWithContext requestApi ctx $ hoistServerWithContext requestApi (Proxy :: Proxy '[BasicAuthCheck Admin, BasicAuthCheck User]) (nt s) server
   where ctx = checkAdminBasicAuth dbref :. checkBasicAuth dbref :. EmptyContext
 
@@ -455,8 +466,8 @@ handleReload (Admin _) = do
     Left err -> do
       liftIO $ hPutStrLn stderr $ show err
       throwError $ err400 { errBody = "An error occoured while reloading configuration. Details were printed to servers STDERR (might contain sensitive data)" }
-    Right LectureConfig{name=n,timeslots=ts,backlogminutes=backlog, authdb=adb,conferenceurl=confurl} -> do
-      liftIO $ writeIORef udbref $ createUserDB $ adb
+    Right LectureConfig{name=n,timeslots=ts,backlogminutes=backlog,authdb=adb,acceptanyusers=eup,conferenceurl=confurl} -> do
+      liftIO $ writeIORef udbref $ AuthConfig eup (createUserDB adb)
       newstate <- liftIO $ atomically $ stateTVar sest $ \s ->
         let nstate = s{lectureName = n, timeSlots=ts, conferenceUrl=confurl, backlogMinutes=backlog} in (nstate, nstate)
       return newstate

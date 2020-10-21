@@ -1,6 +1,8 @@
 name = "Lecture FOOBAR"
 conferenceurl = "https://meet.jit.si/"
 backlogminutes = 20
+# Do users have to exist in db, or do we accept any usernames (with any password)
+acceptanyusers = false
 
 [[timeslots]]
 day   = "Monday"
