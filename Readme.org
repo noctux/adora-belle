@@ -15,7 +15,7 @@ students question via webconf.
 ** Usage
 
 #+BEGIN_SRC bash
-stack run adora-belle -p 8080 -c config.toml
+stack run -- adora-belle -p 8080 -c config.toml
 #+END_SRC
 
 This will start an instance listening at port 8080.
