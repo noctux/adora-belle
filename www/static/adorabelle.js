@@ -242,7 +242,7 @@ function formatRequest(req, context=null) {
 		if (context == "log") {
 			elem = $('<div class="list-group-item list-group-item-secondary align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
 		} else if (req.reqtype == "Submission") {
-			elem = $('<div class="list-group-item list-group-item-secondary align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
+			elem = $('<div class="list-group-item list-group-item-success align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
 			elem.prop('id', req.reqid.contents);
 		} else {
 			elem = $('<div class="list-group-item list-group-item-primary align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
@@ -367,7 +367,7 @@ function markRecentlyDeferred(logItems) {
 		}
 		logItems[i].requests.forEach(function (req){
 			$('#' + req.reqid.contents)
-				.removeClass('list-group-item-primary list-group-item-secondary')
+				.removeClass('list-group-item-primary list-group-item-success')
 				.addClass('list-group-item-warning');
 		});
 	}
