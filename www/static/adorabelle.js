@@ -241,6 +241,9 @@ function formatRequest(req, context=null) {
 		var url = formatUrl(req.reqid.contents);
 		if (context == "log") {
 			elem = $('<div class="list-group-item list-group-item-secondary align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
+		} else if (req.reqtype == "Submission") {
+			elem = $('<div class="list-group-item list-group-item-secondary align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
+			elem.prop('id', req.reqid.contents);
 		} else {
 			elem = $('<div class="list-group-item list-group-item-primary align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
 			elem.prop('id', req.reqid.contents);
