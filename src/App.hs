@@ -350,7 +350,7 @@ requestHelp u rt = do
     else do
         let req = HelpRequest (RequestID uuid) (AuthUser $ user u) ts rt
         let act = LogItem{action = UserLogAction Create, timeStamp = ts, actor = user u, requests = [req]}
-        (Right req, s{activeRequests=a, pendingRequests=(p ++ [req]), actionLog=expireLog blm ts (act:log)})
+        (Left "Sorry, the Tutors are busy, try again tomorrow", s)
 
   case req of
     Left errmsg  ->
