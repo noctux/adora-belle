@@ -520,6 +520,9 @@ var storeduser = getPreference('username');
 var storedpw   = getPreference('password');
 if (storeduser && storedpw && testBasicCredentials(informationendpoint, storeduser, storedpw)) {
 	initApi(storeduser, storedpw);
+	if (admininterface && getPreference('usesound')) {
+		$('#autoPlayModal').modal('show');
+	}
 } else {
 	$('#loginModal').modal({ show: false});
 	$('#loginModal').modal('show');
