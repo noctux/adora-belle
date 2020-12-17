@@ -39,6 +39,7 @@ dependencies:
   - either
   - filepath
   - htoml
+  - memory
   - optparse-applicative
   - parsec
   - random

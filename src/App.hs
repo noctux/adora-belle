@@ -11,6 +11,7 @@ module App where
 
 import           Data.Aeson
 import           Data.Aeson.Types
+import           Data.ByteArray (constEq)
 import           GHC.Generics
 import           Network.Wai
 import           Network.Wai.Handler.Warp
@@ -148,7 +149,7 @@ checkBasicAuthCommon db acceptanypassword basicAuthData = do
                  return $ NoSuchUser
   where
     validatePw pw ref@('$':'2':'y':'$':_) = validatePassword (BL.toStrict $ BS.fromString ref)  (BL.toStrict $ BS.fromString pw)
-    validatePw pw ref = ref == pw
+    validatePw pw ref = (BL.toStrict $ BS.fromString ref) `constEq` (BL.toStrict $ BS.fromString pw)
 
 -- provided we are given a user database, we can supply
 -- a function that checks the basic auth credentials
