@@ -3,6 +3,10 @@ conferenceurl = "https://meet.jit.si/"
 backlogminutes = 20
 # Do users have to exist in db, or do we accept any usernames (with any password)
 acceptanyusers = false
+# Do we want to have predictable room names that are derived from roomprefix and username?
+# Format will be: "${conferenceurl}/${roomprefix}-${username}"
+predictablenames = false
+roomprefix = ""
 
 [[timeslots]]
 day   = "Monday"

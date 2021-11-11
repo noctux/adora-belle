@@ -140,6 +140,8 @@ var username;
 var password;
 var informationendpoint = "public/requests";
 var conferencebaseurl;
+var predictableroomnames;
+var roomnameprefix;
 var admininterface = false;
 if (window.location.pathname.split('/').pop() == "admin.html") {
 	informationendpoint = "admin/requests";
@@ -213,8 +215,12 @@ function adminaction(id, verb) {
 
 function formatUrl(urlsuffix) {
 	// Some jitsiinstances do not like none alphanumeric characters
-	urlsuffix = urlsuffix.replace(/[^0-9a-z]/gi, '');
-	return conferencebaseurl + "/" + encodeURIComponent(urlsuffix);
+	urlsuffix = urlsuffix.replace(/[^0-9a-zA-Z]/gi, '');
+	if (predictableroomnames) {
+		return conferencebaseurl + "/" + encodeURIComponent(roomnameprefix + "-" + username);
+	} else {
+		return conferencebaseurl + "/" + encodeURIComponent(urlsuffix);
+	}
 }
 
 function formatTime(time) {
@@ -421,6 +427,8 @@ function updateUi() {
 		dataType: 'json',
 	}).done(function (data) {
 		conferencebaseurl = data.conferenceUrl;
+		predictableroomnames = data.predictableNames;
+		roomnameprefix = data.roomPrefix;
 		updateLectureName(data.lectureName);
 		updateTimeSlots(data.timeSlots);
 		updatePendingRequests(data.pendingRequests);

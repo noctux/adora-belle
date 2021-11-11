@@ -69,13 +69,15 @@ newtype Responder = Responder String
   deriving ToJSONKey via String
 instance ToJSON Responder
 
-data State = State { lectureName     :: String
-                   , timeSlots       :: [TimeRange]
-                   , conferenceUrl   :: String
-                   , activeRequests  :: Map.Map Responder HelpRequest
-                   , pendingRequests :: [ HelpRequest ]
-                   , actionLog       :: [ LogItem ]
-                   , backlogMinutes  :: Integer
+data State = State { lectureName      :: String
+                   , timeSlots        :: [TimeRange]
+                   , conferenceUrl    :: String
+                   , predictableNames :: Bool
+                   , roomPrefix       :: String
+                   , activeRequests   :: Map.Map Responder HelpRequest
+                   , pendingRequests  :: [ HelpRequest ]
+                   , actionLog        :: [ LogItem ]
+                   , backlogMinutes   :: Integer
                    }
   deriving (Generic, Show, Eq)
 instance ToJSON State
@@ -217,7 +219,9 @@ data LectureConfig = LectureConfig {
     conferenceurl        :: String,
     backlogminutes       :: Integer,
     timeslots            :: [TimeRange],
-    acceptanyusers :: Bool,
+    acceptanyusers       :: Bool,
+    predictablenames     :: Bool,
+    roomprefix           :: String,
     authdb               :: [User]
 } deriving (Show, Generic, Eq)
 instance FromJSON LectureConfig
@@ -291,6 +295,8 @@ run = do
   appstate <- atomically $ newTVar $ State { lectureName = name $ configdata
                                            , conferenceUrl = conferenceurl $ configdata
                                            , timeSlots = timeslots $ configdata
+                                           , predictableNames = predictablenames $ configdata
+                                           , roomPrefix = roomprefix $ configdata
                                            , activeRequests = Map.empty
                                            , pendingRequests = []
                                            , actionLog = []
@@ -467,9 +473,10 @@ handleReload (Admin _) = do
     Left err -> do
       liftIO $ hPutStrLn stderr $ show err
       throwError $ err400 { errBody = "An error occoured while reloading configuration. Details were printed to servers STDERR (might contain sensitive data)" }
-    Right LectureConfig{name=n,timeslots=ts,backlogminutes=backlog,authdb=adb,acceptanyusers=eup,conferenceurl=confurl} -> do
+    Right LectureConfig{name=n,timeslots=ts,backlogminutes=backlog,authdb=adb,acceptanyusers=eup,conferenceurl=confurl,predictablenames=pn,roomprefix=rp} -> do
       liftIO $ writeIORef udbref $ AuthConfig eup (createUserDB adb)
       newstate <- liftIO $ atomically $ stateTVar sest $ \s ->
-        let nstate = s{lectureName = n, timeSlots=ts, conferenceUrl=confurl, backlogMinutes=backlog} in (nstate, nstate)
+        let nstate = s{lectureName = n, timeSlots=ts, conferenceUrl=confurl, predictableNames=pn, roomPrefix=rp, backlogMinutes=backlog} in (nstate, nstate)
       return newstate
 handleReload _  = throwError $ err400 { errBody = "Invalid user" }
+
