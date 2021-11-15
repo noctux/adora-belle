@@ -213,14 +213,23 @@ function adminaction(id, verb) {
 	});
 }
 
-function formatUrl(urlsuffix) {
-	// Some jitsiinstances do not like none alphanumeric characters
-	urlsuffix = urlsuffix.replace(/[^0-9a-zA-Z]/gi, '');
+function formatUrl(req) {
+	var urlsuffix;
 	if (predictableroomnames) {
-		return conferencebaseurl + "/" + encodeURIComponent(roomnameprefix + "-" + username);
+		var user;
+		if (admininterface) {
+			user = req.userid.contents;
+		} else {
+			user = username;
+		}
+		urlsuffix = roomnameprefix + "-" + user;
 	} else {
-		return conferencebaseurl + "/" + encodeURIComponent(urlsuffix);
+		urlsuffix = req.reqid.contents;
+		// Some jitsiinstances do not like none alphanumeric characters
+		urlsuffix = urlsuffix.replace(/[^0-9a-zA-Z]/gi, '');
 	}
+
+	return conferencebaseurl + "/" + encodeURIComponent(urlsuffix);
 }
 
 function formatTime(time) {
@@ -244,7 +253,7 @@ function formatRequest(req, context=null) {
 		elem = $('<div class="list-group-item list-group-item-light"></div>');
 		elem.text(req.reqtype);
 	} else {
-		var url = formatUrl(req.reqid.contents);
+		var url = formatUrl(req);
 		if (context == "log") {
 			elem = $('<div class="list-group-item list-group-item-secondary align-items-center text-left d-flex flex-wrap justify-content-between"></div>');
 		} else if (req.reqtype == "Submission") {
