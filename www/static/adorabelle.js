@@ -435,13 +435,16 @@ function formatTimeSlot(ts) {
 	return elem;
 }
 
-function updateTimeSlots(timeslots) {
+function updateTimeSlots(timeslots, servertime) {
 	var elem;
 	if (timeslots.length <= 0) {
 		elem = $('<div id="timeSlots" class="list-group" >Timeslots appear to be unrestricted</div>');
 	} else {
-		elem = $('<ul id="timeSlots" class="list-group" style="list-style: none"></div>');
-		timeslots.map(x => elem.append(formatTimeSlot(x)));
+		var ul = $('<ul class="list-group" style="list-style: none"></ul>');
+		timeslots.map(x => ul.append(formatTimeSlot(x)));
+		elem = $('<div id="timeSlots"></div>').append(ul);
+		var timestamp = $('<div id="servertime" class="font-weight-light" style="font-family: monospaced; font-size: x-small;"></div>').text("Last updated: " + servertime);
+		elem.append(timestamp);
 	}
 	$('#timeSlots').replaceWith(elem);
 }
@@ -470,12 +473,16 @@ function updateUi() {
 	$.get(informationendpoint, {
 		dataType: 'json',
 	}).done(function (data) {
+		// The timestamp we are using
+		servertime = data.servertime;
+		// Unwrap the actual state
+		data = data.state;
 		conferencebaseurl = data.conferenceUrl;
 		predictableroomnames = data.predictableNames;
 		roomnameprefix = data.roomPrefix;
 		updateLectureName(data.lectureName);
 		updateAwayMessage(data.awayMsg, data.showAwayMsg);
-		updateTimeSlots(data.timeSlots);
+		updateTimeSlots(data.timeSlots, servertime);
 		updatePendingRequests(data.pendingRequests);
 		updateServicedRequests(data.activeRequests);
 		if (admininterface) {

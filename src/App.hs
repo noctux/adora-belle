@@ -21,6 +21,7 @@ import           System.IO
 import           Crypto.BCrypt
 import qualified Data.Map as Map
 import           Data.Time
+import           Data.Time.Format.ISO8601
 import           Data.UUID
 import           Data.UUID.V4
 import qualified Data.ByteString.Lazy.UTF8 as BS
@@ -83,6 +84,12 @@ data State = State { lectureName      :: String
                    }
   deriving (Generic, Show, Eq)
 instance ToJSON State
+
+data TimestampedState = TimestampedState { servertime :: String
+                                         , state      :: State
+                                         }
+  deriving (Generic, Show, Eq)
+instance ToJSON TimestampedState
 
 data LogVerb = UserLogAction UserVerb | AdminLogAction AdminVerb
   deriving (Generic, Show, Eq)
@@ -254,10 +261,10 @@ type RequestApi =
         "cancel"  :> ReqBody '[JSON] RequestID :> PostCreated '[JSON] [HelpRequest] :<|>
   {- Request an update of the global state -}
   "public" :> BasicAuth "AdoraBelle UI" User :>
-        "requests" :> Get  '[JSON] State :<|>
+        "requests" :> Get  '[JSON] TimestampedState :<|>
   {- Request the deblinded state as admin -}
   "admin" :> BasicAuth "admin interface" Admin :>
-        "requests" :> Get  '[JSON] State             :<|>
+        "requests" :> Get  '[JSON] TimestampedState :<|>
   {- Handle an request using Adminaction (so Handle it yourself, discard it, complete a currently running session, returns the modified helprequests -}
   "admin" :> BasicAuth "admin interface" Admin :>
         "handle"   :> ReqBody '[JSON] AdminAction :> PostCreated '[JSON] [HelpRequest] :<|>
@@ -405,13 +412,17 @@ cancelRequest u rid = do
     findActive = filter matchesid . Map.assocs
     split      = partition (\e -> reqid e == rid)
 
-requestPublicState :: User -> AppM State
+getCurrentLocalTimeString :: IO String
+getCurrentLocalTimeString = getZonedTime >>= return . iso8601Show
+
+requestPublicState :: User -> AppM TimestampedState
 requestPublicState u = do
   ServantState{state=sest} <- ask
   s@State{activeRequests=a,pendingRequests=p} <- liftIO $ atomically $ readTVar sest
   let active = Map.map blind a
   let pend   = Prelude.map blind p
-  return $ s{activeRequests=active, pendingRequests=pend, actionLog = []}
+  ts   <- liftIO $ getCurrentLocalTimeString
+  return $ TimestampedState { servertime = ts, state =  s{activeRequests=active, pendingRequests=pend, actionLog = []}}
   where
     blind r@(HelpRequest _ (AuthUser au) _ _)
         | au == user u = r
@@ -419,10 +430,13 @@ requestPublicState u = do
     blind r = r { userid = Anonymous, reqid = BlindedID }
 
 
-requestAdminState  :: Admin -> AppM State
+requestAdminState  :: Admin -> AppM TimestampedState
 requestAdminState _ = do
   ServantState{state=sest} <- ask
-  liftIO $ atomically $ readTVar sest
+  ts   <- liftIO $ getCurrentLocalTimeString
+  s    <- liftIO $ atomically $ readTVar sest
+  return $ TimestampedState { servertime = ts, state = s }
+
 
 handleAdminRequest :: Admin -> AdminAction -> AppM [HelpRequest]
 handleAdminRequest (Admin name) (AdminAction id act)   = do
