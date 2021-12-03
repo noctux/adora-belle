@@ -136,6 +136,11 @@ function registerReloadButton() {
 	$('#navbarbuttonarea').append(elem);
 }
 
+function registerAwayButton() {
+	var elem = $('<button id="awayBtn" class="btn btn-sm btn-outline-primary my-2 my-sm-0" type="submit">Away</button>');
+	$('#navbarbuttonarea').append(elem);
+}
+
 var username;
 var password;
 var informationendpoint = "public/requests";
@@ -147,6 +152,7 @@ if (window.location.pathname.split('/').pop() == "admin.html") {
 	informationendpoint = "admin/requests";
 	admininterface = true;
 	registerReloadButton();
+	registerAwayButton();
 }
 
 function triggerConfigReload() {
@@ -156,6 +162,20 @@ function triggerConfigReload() {
 		url: "admin/reload",
 		dataType: 'json',
 		data: ""
+	}).done(function (data) {
+		updateUi();
+	}).fail(function (err) {
+		showError(err.responseText);
+	});
+}
+
+function triggerAwayMessage(msg, show) {
+	$.ajax({
+		type: "POST",
+		contentType: "application/json; charset=utf-8",
+		url: "admin/away",
+		dataType: 'json',
+		data: JSON.stringify([msg, show])
 	}).done(function (data) {
 		updateUi();
 	}).fail(function (err) {
@@ -430,6 +450,21 @@ function updateLectureName(lectureName) {
 	$('#lectureName').text(lectureName);
 }
 
+function updateAwayMessage(awayMsg, show) {
+	$('#awayMsg').text(awayMsg);
+	if (show) {
+		$('#awayMsg').show();
+		if (admininterface) {
+			$('#awayBtn').text("Back");
+		}
+	} else {
+		$('#awayMsg').hide();
+		if (admininterface) {
+			$('#awayBtn').text("Away");
+		}
+	}
+}
+
 
 function updateUi() {
 	$.get(informationendpoint, {
@@ -439,6 +474,7 @@ function updateUi() {
 		predictableroomnames = data.predictableNames;
 		roomnameprefix = data.roomPrefix;
 		updateLectureName(data.lectureName);
+		updateAwayMessage(data.awayMsg, data.showAwayMsg);
 		updateTimeSlots(data.timeSlots);
 		updatePendingRequests(data.pendingRequests);
 		updateServicedRequests(data.activeRequests);
@@ -509,6 +545,15 @@ function initApi(user, pw) {
 		$('#questionBtn').detach();
 		$('#submissionBtn').detach();
 		$('#configreloadBtn').on("click", function (e) { triggerConfigReload() });
+		$('#awayBtn').on("click", function (e) {
+			if ($('#awayBtn').text() === "Away") {
+				$('#awayMsgInput').val($('#awayMsg').text());
+				$('#awayModal').modal({ show: false});
+				$('#awayModal').modal('show');
+			} else {
+				triggerAwayMessage($('#awayMsg').text(), false)
+			}
+		});
 		$('#backlogheader').css("display", "initial");
 	} else {
 		$('#questionBtn').on("click",     function (e) { requestHelp("Question")   });
@@ -547,3 +592,10 @@ if (storeduser && storedpw && testBasicCredentials(informationendpoint, storedus
 	$('#loginModal').modal({ show: false});
 	$('#loginModal').modal('show');
 }
+
+$('#awayform').on('submit', function(event) {
+	event.preventDefault();
+	var msg = $('#awayMsgInput').val();
+	$('#awayModal').modal('hide');
+	triggerAwayMessage(msg, true);
+});

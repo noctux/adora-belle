@@ -42,6 +42,9 @@
 		<ul id="timeSlots" class="list-group" style="list-style: none">
 		</ul>
 	  </div>
+
+	  <br />
+	  <div id="awayMsg" style="display: none;" class="alert alert-info mx-auto w-50 font-weight-bold"></div>
 		
 
 
@@ -92,6 +95,26 @@
 			</div>
 			<div class="modal-footer">
 			  <button type="submit" class="btn btn-primary">Submit</button>
+			</div>
+		  </form>
+		</div>
+	  </div>
+	</div>
+
+	<!-- Away modal interface, hidden by default -->
+	<div class="modal fade" id="awayModal" tabindex="-1" role="dialog" aria-labelledby="awayModalLabel" aria-hidden="true">
+	  <div class="modal-dialog modal-dialog-centered" role="document">
+		<div class="modal-content">
+		  <div class="modal-header">
+			<h5 class="modal-title" id="awayModalLabel">Away Message</h5>
+		  </div>
+		  <form id="awayform">
+			<div class="modal-body">
+			  <div class="form-group">
+				<input type="text" class="form-control" id="awayMsgInput">
+			  </div>
+			<div class="modal-footer">
+			  <button type="submit" class="btn btn-primary">Away</button>
 			</div>
 		  </form>
 		</div>

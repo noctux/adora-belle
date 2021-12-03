@@ -27,7 +27,7 @@ import qualified Data.ByteString.Lazy.UTF8 as BS
 import qualified Data.ByteString.Lazy as BL
 import           Control.Exception (try)
 import           Control.Monad (when)
-import           Control.Concurrent.STM.TVar (TVar, newTVar, readTVar, stateTVar)
+import           Control.Concurrent.STM.TVar (TVar, newTVar, readTVar, stateTVar, modifyTVar')
 import           Control.Monad.STM (atomically)
 import           Control.Monad.Trans.Reader (ReaderT, ask, runReaderT)
 import           Control.Monad.IO.Class      (liftIO, MonadIO)
@@ -78,6 +78,8 @@ data State = State { lectureName      :: String
                    , pendingRequests  :: [ HelpRequest ]
                    , actionLog        :: [ LogItem ]
                    , backlogMinutes   :: Integer
+                   , awayMsg          :: String
+                   , showAwayMsg      :: Bool
                    }
   deriving (Generic, Show, Eq)
 instance ToJSON State
@@ -107,6 +109,10 @@ data AdminAction = AdminAction RequestID App.AdminVerb
   deriving (Generic, Show, Eq)
 instance ToJSON AdminAction
 instance FromJSON AdminAction
+
+data AwayMsg = AwayMsg String Bool
+  deriving (Show, Generic, Eq)
+instance FromJSON AwayMsg
 
 -- * Basic auth: https://docs.servant.dev/en/stable/cookbook/basic-auth/BasicAuth.html
 type Username = String
@@ -257,6 +263,8 @@ type RequestApi =
         "handle"   :> ReqBody '[JSON] AdminAction :> PostCreated '[JSON] [HelpRequest] :<|>
   "admin" :> BasicAuth "admin interface" Admin :>
         "reload"   :> PostCreated '[JSON] State :<|>
+  "admin" :> BasicAuth "admin interface" Admin :>
+        "away"     :> ReqBody '[JSON] AwayMsg :> PostCreated '[JSON] ():<|>
   Raw
 
 requestApi :: Proxy RequestApi
@@ -301,6 +309,8 @@ run = do
                                            , pendingRequests = []
                                            , actionLog = []
                                            , backlogMinutes = backlogminutes $ configdata
+                                           , awayMsg = ""
+                                           , showAwayMsg = False
                                            }
   dbref <- newIORef $ AuthConfig (acceptanyusers (configdata :: LectureConfig)) (createUserDB $ authdb (configdata :: LectureConfig))
   runSettings settings $ stripAuthenticateHeader $ mkApp dbref $ ServantState appstate (configfile (config :: CLIConfig)) dbref
@@ -320,6 +330,7 @@ server =
   requestAdminState :<|>
   handleAdminRequest :<|>
   handleReload :<|>
+  handleAway :<|>
   serveDirectoryFileServer "./www"
 
 expireLog :: Integer -> UTCTime -> [LogItem] -> [LogItem]
@@ -480,3 +491,7 @@ handleReload (Admin _) = do
       return newstate
 handleReload _  = throwError $ err400 { errBody = "Invalid user" }
 
+handleAway :: Admin -> AwayMsg -> AppM ()
+handleAway _ (AwayMsg msg showMsg) = do
+  ServantState{state=sest} <- ask
+  liftIO $ atomically $ modifyTVar' sest $ \s -> s{awayMsg=msg,showAwayMsg=showMsg}
