@@ -138,7 +138,7 @@ function registerReloadButton() {
 
 function registerAwayButton() {
 	var elem = $('<button id="awayBtn" class="btn btn-sm btn-outline-primary my-2 my-sm-0" type="submit">Away</button>');
-	$('#navbarbuttonarea').append(elem);
+	$('#navbarbuttonarea').prepend(elem);
 }
 
 var username;

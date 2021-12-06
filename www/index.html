@@ -21,13 +21,13 @@
 		  src: url(static/fa-solid-900.woff);
 	  }
 	</style>
-	
-	<nav class="navbar sticky-top navbar-dark bg-dark d-flex justify-content-between">
+
+	<nav class="navbar sticky-top navbar-dark bg-dark">
 	  <span>
 		<a class="navbar-brand" href="#">Adora Belle</a>
 		<div class="navbar-text">- Your hands where I can see them</div>
 	  </span>
-	  <span id="navbarbuttonarea">
+	  <span id="navbarbuttonarea" class="d-flex justify-content-between">
 		<button id="preferencesBtn" class="btn btn-sm btn-outline-primary my-2 my-sm-0" data-toggle="modal" data-target="#preferenceModal"><span style="font-family: fontawesome-solid"></span> Preferences</button>
 	  </span>
 	</nav>
@@ -157,6 +157,9 @@
 	</footer>
 
 	<style>
+	  #navbarbuttonarea > * {
+		  margin-left: .5em;
+	  }
 	  html {
 		  position: relative;
 		  min-height: 100%;
