@@ -599,3 +599,8 @@ $('#awayform').on('submit', function(event) {
 	$('#awayModal').modal('hide');
 	triggerAwayMessage(msg, true);
 });
+
+$('#awayModal').on('shown.bs.modal', function () {
+	$('#awayMsgInput').trigger('focus');
+	$('#awayMsgInput').select();
+});
