@@ -443,7 +443,9 @@ function updateTimeSlots(timeslots, servertime) {
 		var ul = $('<ul class="list-group" style="list-style: none"></ul>');
 		timeslots.map(x => ul.append(formatTimeSlot(x)));
 		elem = $('<div id="timeSlots"></div>').append(ul);
-		var timestamp = $('<div id="servertime" class="font-weight-light" style="font-family: monospaced; font-size: x-small;"></div>').text("Last updated: " + servertime);
+		var serverts = new Date(servertime);
+		var day = ["Sunday","Monday", "Tuesday", "Wednesday", "Thursday","Friday","Saturday"][serverts.getDay()];
+		var timestamp = $('<div id="servertime" class="font-weight-light" style="font-family: monospaced; font-size: x-small;"></div>').text("Server time: " + day + ": " + serverts.getHours() + ":" + serverts.getMinutes());
 		elem.append(timestamp);
 	}
 	$('#timeSlots').replaceWith(elem);
